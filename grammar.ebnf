@@ -13,7 +13,7 @@ redir = '<', str
       | '>', str
       | '>|', str
       | '>!'
-      | '>_'
+      | '>_';
 
 strs = str, {str};
 
