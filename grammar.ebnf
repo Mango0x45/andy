@@ -1,0 +1,20 @@
+program = stmts;
+
+stmts = stmt, {stmt};
+
+stmt = expr, end;
+
+expr = cmd;
+
+cmd = strs, [redir];
+
+redir = '<', str
+      | '<_'
+      | '>', str
+      | '>|', str
+      | '>!'
+      | '>_'
+
+strs = str, {str};
+
+end = '\n' | ';';
