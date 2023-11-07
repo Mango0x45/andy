@@ -16,5 +16,5 @@ redir =
 value = arg | string;
 
 string = '"', ?[^"]*?, '"';
-arg = ?[^|>;\n\s]+?;
+arg = ?[^|><;\n\s]+?;
 end = ';' | '\n';
