@@ -2,34 +2,42 @@ package vm
 
 import (
 	"errors"
+	"fmt"
 	"os"
 	"os/exec"
 	"sync"
 
 	"git.sr.ht/~mango/andy/ast"
-	"git.sr.ht/~mango/andy/log"
 )
 
 const appendFlags = os.O_APPEND | os.O_CREATE | os.O_WRONLY
 
+var CrashOnError = false
+
 func Exec(prog ast.Program) {
 	for _, cmd := range prog {
-		execCommand(cmd, streams{os.Stdin, os.Stdout, os.Stderr})
+		err := execCommand(cmd, streams{os.Stdin, os.Stdout, os.Stderr})
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "andy: %s\n", err)
+
+			if CrashOnError {
+				os.Exit(1)
+			}
+		}
 	}
 }
 
-func execCommand(cmd ast.Command, s streams) {
+func execCommand(cmd ast.Command, s streams) error {
 	switch cmd.(type) {
 	case ast.Simple:
-		execSimple(cmd.(ast.Simple), s)
+		return execSimple(cmd.(ast.Simple), s)
 	case ast.Compound:
-		execCompound(cmd.(ast.Compound), s)
-	default:
-		panic("unreachable")
+		return execCompound(cmd.(ast.Compound), s)
 	}
+	panic("unreachable")
 }
 
-func execSimple(cmd ast.Simple, s streams) {
+func execSimple(cmd ast.Simple, s streams) error {
 	args := make([]string, 0, cap(cmd.Args))
 	for _, v := range cmd.Args {
 		switch v.(type) {
@@ -72,16 +80,14 @@ func execSimple(cmd ast.Simple, s streams) {
 		case ast.RedirAppend:
 			fp, err := os.OpenFile(name, appendFlags, 0666)
 			if err != nil {
-				log.Err("Failed to open file ‘%s’: %s", name, err)
-				return
+				return err
 			}
 			defer fp.Close()
 			c.Stdout = fp
 		case ast.RedirRead:
 			fp, err := os.Open(name)
 			if err != nil {
-				log.Err("Failed to open file ‘%s’: %s", name, err)
-				return
+				return err
 			}
 			defer fp.Close()
 			c.Stdin = fp
@@ -91,23 +97,19 @@ func execSimple(cmd ast.Simple, s streams) {
 			case errors.Is(err, os.ErrNotExist):
 				fp, err := os.Create(name)
 				if err != nil {
-					log.Err("Failed to create file ‘%s’: %s", name, err)
-					return
+					return err
 				}
 				defer fp.Close()
 				c.Stdout = fp
 			case err != nil:
-				log.Err("Failed to stat file ‘%s’: %s", name, err)
-				return
+				return errFileOp{"stat", name, err}
 			default: // File exists
-				log.Err("Won’t clobber file ‘%s’; did you mean to use ‘>|’?", name)
-				return
+				return errClobber{name}
 			}
 		case ast.RedirWriteClob:
 			fp, err := os.Create(name)
 			if err != nil {
-				log.Err("Failed to create file ‘%s’: %s", name, err)
-				return
+				return err
 			}
 			defer fp.Close()
 			c.Stdout = fp
@@ -127,34 +129,33 @@ func execSimple(cmd ast.Simple, s streams) {
 	}
 
 	if f, ok := builtins[c.Args[0]]; ok {
-		f(c)
-	} else {
-		c.Run()
+		return f(c)
 	}
+	return c.Run()
 }
 
-func execCompound(cmd ast.Compound, s streams) {
+func execCompound(cmd ast.Compound, s streams) error {
 	switch cmd.Op {
 	case ast.CompoundPipe:
-		execPipe(cmd, s)
-	default:
-		panic("unreachable")
+		return execPipe(cmd, s)
 	}
+	panic("unreachable")
 }
 
-func execPipe(cmd ast.Compound, s streams) {
+func execPipe(cmd ast.Compound, s streams) error {
 	r, w, err := os.Pipe()
 	if err != nil {
-		log.Err("Failed to create pipe")
-		return
+		return errors.New("Failed to create pipe")
 	}
 
+	var el, er error
 	wg := sync.WaitGroup{}
 	go func() {
 		wg.Add(1)
-		execCommand(cmd.Lhs, streams{s.in, w, s.err})
+		el = execCommand(cmd.Lhs, streams{s.in, w, s.err})
 		wg.Done()
 	}()
-	execCommand(cmd.Rhs, streams{r, s.out, s.err})
+	er = execCommand(cmd.Rhs, streams{r, s.out, s.err})
 	wg.Wait()
+	return errors.Join(el, er)
 }

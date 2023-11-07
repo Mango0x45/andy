@@ -1,9 +1,11 @@
 package parser
 
 import (
+	"fmt"
+	"os"
+
 	"git.sr.ht/~mango/andy/ast"
 	"git.sr.ht/~mango/andy/lexer"
-	"git.sr.ht/~mango/andy/log"
 )
 
 func (p *Parser) parseCommands() []ast.Command {
@@ -25,7 +27,7 @@ func (p *Parser) parseCommand() ast.Command {
 	case ast.IsValue(t.Kind):
 		cmd = p.parseSimple()
 	default:
-		log.Err("Expected command but found ‘%s’", t)
+		die(errExpected{"command", t})
 	}
 
 	switch t := p.next(); t.Kind {
@@ -38,7 +40,7 @@ func (p *Parser) parseCommand() ast.Command {
 		}
 	case lexer.TokEndStmt, lexer.TokEof:
 	default:
-		log.Err("Expected operator or newline but found ‘%s’", t)
+		die(errExpected{"operator or newline", t})
 	}
 
 	return cmd
@@ -74,7 +76,7 @@ outer:
 			case lexer.TokString:
 				r.File = ast.String(t.Val)
 			default:
-				log.Err("Expected file after redirect but got ‘%s’", t)
+				die(errExpected{"file after redirect", t})
 			}
 
 			redirs = append(redirs, r)
@@ -82,4 +84,9 @@ outer:
 			return ast.Simple{Args: args, Redirs: redirs}
 		}
 	}
+}
+
+func die(e error) {
+	fmt.Fprintf(os.Stderr, "andy: %s\n", e)
+	os.Exit(1)
 }

@@ -5,13 +5,13 @@ import (
 	"os/exec"
 )
 
-type builtin func(cmd *exec.Cmd)
+type builtin func(cmd *exec.Cmd) error
 
 var builtins = map[string]builtin{
 	"echo": builtinEcho,
 }
 
-func builtinEcho(cmd *exec.Cmd) {
+func builtinEcho(cmd *exec.Cmd) error {
 	// Cast to []any
 	args := make([]any, len(cmd.Args)-1)
 	for i := range args {
@@ -19,4 +19,5 @@ func builtinEcho(cmd *exec.Cmd) {
 	}
 
 	fmt.Fprintln(cmd.Stdout, args...)
+	return nil
 }
