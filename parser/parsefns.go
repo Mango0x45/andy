@@ -1,109 +1,85 @@
 package parser
 
 import (
-	"os"
-
+	"git.sr.ht/~mango/andy/ast"
 	"git.sr.ht/~mango/andy/lexer"
+	"git.sr.ht/~mango/andy/log"
 )
 
-func Parse(toks <-chan lexer.Token) Exprs {
-	p := &parser{toks: toks}
-	prog := []Expr{}
+func (p *Parser) parseCommands() []ast.Command {
+	cmds := []ast.Command{}
 
 	for {
-		if p.peek().Kind == lexer.TokEof {
-			return prog
+		if k := p.peek().Kind; k == lexer.TokEof {
+			return cmds
 		}
-		prog = append(prog, p.parseExpr())
+
+		cmds = append(cmds, p.parseCommand())
 	}
 }
 
-func (p *parser) parseExpr() Expr {
-	var e Expr
+func (p *Parser) parseCommand() ast.Command {
+	var cmd ast.Command
 
-	switch t := p.peek(); t.Kind {
-	case lexer.TokString:
-		e = p.parseCmd()
+	switch t := p.peek(); {
+	case ast.IsValue(t.Kind):
+		cmd = p.parseSimple()
 	default:
-		eprintln(errExpected{e: "command", g: t})
+		log.Err("Expected command but found ‘%s’", t)
 	}
 
-	for p.peek().Kind == lexer.TokEndStmt {
+	switch t := p.next(); t.Kind {
+	case lexer.TokPipe:
+		rhs := p.parseCommand()
+		cmd = ast.Compound{
+			Lhs: cmd,
+			Rhs: rhs,
+			Op:  ast.CompoundPipe,
+		}
+	case lexer.TokEndStmt, lexer.TokEof:
+	default:
+		log.Err("Expected operator or newline but found ‘%s’", t)
+	}
+
+	return cmd
+}
+
+func (p *Parser) parseSimple() ast.Simple {
+	args := make([]ast.Value, 0, 4) // Add a little capacity
+	var redirs []ast.Redir
+
+outer:
+	for {
+		switch t := p.peek(); t.Kind {
+		case lexer.TokArg:
+			args = append(args, ast.Argument(t.Val))
+		case lexer.TokString:
+			args = append(args, ast.String(t.Val))
+		default:
+			break outer
+		}
+
 		p.next()
 	}
 
-	return e
-}
-
-func (p *parser) parseCmd() Expr {
-	c := Cmd{Argv: p.parseStrings()}
-
 	for {
-		t := p.peek()
-
-		switch {
-		case t.Kind.IsRead() && c.Stdin.Kind != RedirNone:
-			eprintln(errRedirect(c.Stdin.Kind))
-		case t.Kind.IsWrite() && c.Stdout.Kind != RedirNone:
-			eprintln(errRedirect(c.Stdout.Kind))
-		}
-
-		switch t.Kind {
-		case lexer.TokRead:
-			p.next()
-			c.Stdin = Redirection{RedirNoClobber, p.parseStrings()}
-		case lexer.TokReadNull:
-			p.next()
-			dst := []Strings{String(os.DevNull)}
-			c.Stdin = Redirection{RedirNoClobber, dst}
-		case lexer.TokWrite:
-			p.next()
-			c.Stdout = Redirection{RedirNoClobber, p.parseStrings()}
-		case lexer.TokWriteClob:
-			p.next()
-			c.Stdout = Redirection{RedirClobber, p.parseStrings()}
-		case lexer.TokWriteErr:
-			p.next()
-			dst := []Strings{String(os.Stderr.Name())}
-			c.Stdout = Redirection{RedirClobber, dst}
-		case lexer.TokWriteNull:
-			p.next()
-			dst := []Strings{String(os.DevNull)}
-			c.Stdout = Redirection{RedirClobber, dst}
-		default:
-			return c
-		}
-	}
-}
-
-func (p *parser) parseStrings() []Strings {
-	t := p.next()
-	if t.Kind != lexer.TokString {
-		eprintln(errExpected{e: "string", g: t})
-	}
-
-	strs := []Strings{String(t.Val)}
-
-	for {
-		switch t := p.peek(); t.Kind {
-		case lexer.TokString:
-			p.next()
-			strs = append(strs, String(t.Val))
-		case lexer.TokConcat:
-			p.next()
-			s := strs[len(strs)-1]
+		switch t := p.peek(); {
+		case ast.IsRedir(t.Kind):
+			p.next() // Consume token
+			r := ast.NewRedir(t.Kind)
 
 			switch t := p.next(); t.Kind {
+			case lexer.TokArg:
+				r.File = ast.Argument(t.Val)
 			case lexer.TokString:
-				strs[len(strs)-1] = Concat{
-					L: s,
-					R: String(t.Val),
-				}
+				r.File = ast.String(t.Val)
 			default:
-				eprintln(errExpected{e: "string", g: t})
+				log.Err("Expected file after redirect but got ‘%s’", t)
 			}
+
+			redirs = append(redirs, r)
 		default:
-			return strs
+			return ast.Simple{Args: args, Redirs: redirs}
 		}
 	}
 }

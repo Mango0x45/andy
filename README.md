@@ -13,10 +13,14 @@ shells, most notably Rc from the Plan 9 operating system.
 This shell is very much a work in progress, don’t expect anything from this for
 a while.  The currently implemented features are:
 
-- [X] Simple commands
-- [X] File reading
-- [X] File writing
-- [X] String concatenation
+- [X] Simple commands (`cat foo bar`)
+- [X] File reading (`<`)
+- [X] File writing (`>`)
+- [X] File appending (`>>`)
+- [X] File clobbering (`>|`)
+- [X] Read from /dev/null (`<_`)
+- [X] Write to /dev/null & /dev/stderr (`>_` & `>!`)
+- [X] Pipelines (`cmd1 | … | cmdN`)
 
 ## Example
 

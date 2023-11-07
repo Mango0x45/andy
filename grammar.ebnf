@@ -1,20 +1,20 @@
-program = stmts;
+(* Anything between ‘??’ represents a regex.  Regex character classes are
+   unicode aware (‘\s’ matches all unicode spaces) *)
 
-stmts = stmt, {stmt};
+program = command, {command};
+command = (simple | compound), end;
 
-stmt = expr, end;
+compound = command, '|', command;
+simple = value, {value}, {redir};
 
-expr = cmd;
+redir =
+	( '<'
+	| '>'
+	| '>|'
+	| '>>'
+	), value;
+value = arg | string;
 
-cmd = strs, [redir];
-
-redir = '<', str
-      | '<_'
-      | '>', str
-      | '>|', str
-      | '>!'
-      | '>_';
-
-strs = str, {str};
-
-end = '\n' | ';';
+string = '"', ?[^"]*?, '"',
+arg = ?[^|>;\n\s]+?
+end = ';' | '\n';

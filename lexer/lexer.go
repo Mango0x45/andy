@@ -7,36 +7,37 @@ import (
 	"unicode/utf8"
 )
 
-const eof = -1
+const eof rune = -1
 
 type lexer struct {
-	input string
-	start int
-	pos   int
-	width int
-	Out   chan Token
+	input string     // The input string to lex
+	start int        // The start of the current token in input
+	pos   int        // The pos of the cursor in input
+	width int        // Width of the last rune lexed
+	Out   chan Token // Token output channel
 }
 
 func New(input string) *lexer {
-	l := &lexer{
+	return &lexer{
 		input: input,
 		Out:   make(chan Token),
 	}
-	return l
 }
 
 func (l *lexer) Run() {
-	for state := firstState; state != nil; {
+	for state := lexDefault; state != nil; {
 		state = state(l)
 	}
 	close(l.Out)
 }
 
 func (l *lexer) emit(t TokenType) {
-	l.Out <- Token{
+	tok := Token{
 		Kind: t,
-		Val: l.input[l.start:l.pos],
+		Val:  l.input[l.start:l.pos],
 	}
+	// fmt.Printf("Token: %s\n", tok)
+	l.Out <- tok
 	l.start = l.pos
 }
 
@@ -60,6 +61,10 @@ func (l *lexer) peek() rune {
 
 func (l *lexer) backup() {
 	l.pos -= l.width
+}
+
+func (l *lexer) align() {
+	l.start = l.pos
 }
 
 func (l *lexer) accept(valid string) bool {
@@ -86,7 +91,7 @@ func (l *lexer) acceptNRun(valid string, m int) int {
 func (l *lexer) errorf(format string, args ...any) lexFn {
 	l.Out <- Token{
 		Kind: TokError,
-		Val: fmt.Sprintf(format, args...),
+		Val:  fmt.Sprintf(format, args...),
 	}
 	return nil
 }

@@ -5,67 +5,60 @@ import "fmt"
 type TokenType int
 
 const (
-	// TokError is the token emitted during a lexing error.  It signals the
-	// end of lexical analysis.
+	// TokError is the token emitted during a lexing error.  It signals the end
+	// of lexical analysis.
 	TokError TokenType = iota
 
-	TokConcat    // Not a real syntax element, signals string concatination
-	TokEndStmt   // End of statement, either a newline or semicolon
-	TokEof       // End of file
-	TokRead      // The ‘<’ operator
-	TokReadNull  // The ‘<_’ operator
-	TokString    // A string
-	TokWrite     // The ‘>’ operator
-	TokWriteClob // The ‘>|’ operator
-	TokWriteErr  // The ‘>!’ operator
-	TokWriteNull // The ‘>_’ operator
+	TokEndStmt // End of statement, either a newline or semicolon
+	TokEof     // End of file
+
+	TokArg    // An unquoted string
+	TokString // A quoted string
+
+	TokAppend  // The ‘>>’ operator
+	TokClobber // The ‘>|’ operator
+	TokRead    // The ‘<’ operator
+	TokWrite   // The ‘>’ operator
+
+	TokPipe // The ‘|’ operator
 )
-
-func (t TokenType) IsRead() bool {
-	return t == TokRead || t == TokReadNull
-}
-
-func (t TokenType) IsWrite() bool {
-	return t == TokWrite ||
-		t == TokWriteClob ||
-		t == TokWriteErr ||
-		t == TokWriteNull
-}
-
-const maxStrLen = 20
 
 type Token struct {
 	Kind TokenType
 	Val  string
 }
 
+// Maximum length of a string before truncation in diagnostics printing
+// TokString
+const maxStrLen = 20
+
 func (t Token) String() string {
 	switch t.Kind {
 	case TokError:
-		return t.Val
-	case TokConcat:
-		return "string concatination"
+		return "Error: " + t.Val
+
 	case TokEndStmt:
-		return "end of line"
+		return "end of statement"
 	case TokEof:
 		return "EOF"
-	case TokRead:
-		return "<"
-	case TokReadNull:
-		return "<_"
-	case TokString:
+
+	case TokArg, TokString:
 		if len(t.Val) > maxStrLen {
 			return fmt.Sprintf("%.*s…", maxStrLen, t.Val)
 		}
 		return t.Val
+
+	case TokAppend:
+		return ">>"
+	case TokClobber:
+		return ">|"
+	case TokRead:
+		return "<"
 	case TokWrite:
 		return ">"
-	case TokWriteClob:
-		return ">|"
-	case TokWriteErr:
-		return ">!"
-	case TokWriteNull:
-		return ">_"
+
+	case TokPipe:
+		return "|"
 	}
 
 	panic("unreachable")
