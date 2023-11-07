@@ -72,16 +72,16 @@ func execSimple(cmd ast.Simple, s streams) {
 		case ast.RedirAppend:
 			fp, err := os.OpenFile(name, appendFlags, 0666)
 			if err != nil {
-					log.Err("Failed to open file ‘%s’: %s", name, err)
-					return
+				log.Err("Failed to open file ‘%s’: %s", name, err)
+				return
 			}
 			defer fp.Close()
 			c.Stdout = fp
 		case ast.RedirRead:
 			fp, err := os.Open(name)
 			if err != nil {
-					log.Err("Failed to open file ‘%s’: %s", name, err)
-					return
+				log.Err("Failed to open file ‘%s’: %s", name, err)
+				return
 			}
 			defer fp.Close()
 			c.Stdin = fp
