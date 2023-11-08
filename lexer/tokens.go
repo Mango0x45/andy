@@ -23,7 +23,7 @@ const (
 	TokPipe // The ‘|’ operator
 
 	TokLAnd // The ‘&&’ operator
-	TokLOr  // The ‘|| operator
+	TokLOr  // The ‘||’ operator
 )
 
 type Token struct {
