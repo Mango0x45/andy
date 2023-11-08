@@ -8,9 +8,9 @@ import (
 type builtin func(cmd *exec.Cmd) commandResult
 
 var builtins = map[string]builtin{
-	"echo": builtinEcho,
+	"echo":  builtinEcho,
 	"false": builtinFalse,
-	"true": builtinTrue,
+	"true":  builtinTrue,
 }
 
 func builtinEcho(cmd *exec.Cmd) commandResult {

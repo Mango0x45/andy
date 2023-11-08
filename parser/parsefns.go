@@ -33,7 +33,7 @@ func (p *Parser) parseCommandList() ast.CommandList {
 		tmp := cmdList
 		cmdList = ast.CommandList{
 			Lhs: &tmp,
-			Op: op,
+			Op:  op,
 			Rhs: xlist.Lhs,
 		}
 		op = xlist.Op
@@ -60,7 +60,7 @@ func (p *Parser) parseXCommandList() ast.XCommandList {
 	}
 }
 
-func (p* Parser) parsePipeline() ast.Pipeline {
+func (p *Parser) parsePipeline() ast.Pipeline {
 	pipe := ast.Pipeline{p.parseSimple()}
 
 	for {
@@ -76,7 +76,7 @@ func (p* Parser) parsePipeline() ast.Pipeline {
 	}
 }
 
-func (p* Parser) parseSimple() ast.Simple {
+func (p *Parser) parseSimple() ast.Simple {
 	args := make([]ast.Value, 0, 4) // Add a little capacity
 	var redirs []ast.Redirect
 
@@ -115,11 +115,11 @@ outer:
 			redirs = append(redirs, r)
 		default:
 			return ast.Simple{
-				Args: args,
+				Args:   args,
 				Redirs: redirs,
-				In: os.Stdin,
-				Out: os.Stdout,
-				Err: os.Stderr,
+				In:     os.Stdin,
+				Out:    os.Stdout,
+				Err:    os.Stderr,
 			}
 		}
 	}

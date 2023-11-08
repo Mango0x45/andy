@@ -32,8 +32,8 @@ type Pipeline []Simple
 
 // Simple is the simplest form of a command, just arguments and redirects
 type Simple struct {
-	Args   []Value
-	Redirs []Redirect
+	Args         []Value
+	Redirs       []Redirect
 	In, Out, Err *os.File
 }
 
