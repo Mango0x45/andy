@@ -1,10 +1,9 @@
 (* Anything between ‘??’ represents a regex.  Regex character classes are
    unicode aware (‘\s’ matches all unicode spaces) *)
 
-program = command, {command};
-command = (simple | compound), end;
-
-compound = command, '|', command;
+program = cmdlist;
+cmdlist = pipeline, {lop, pipeline} end;
+pipeline = simple, {'|', simple};
 simple = value, {value}, {redir};
 
 redir =
@@ -17,4 +16,5 @@ value = arg | string;
 
 string = '"', ?[^"]*?, '"';
 arg = ?[^|><;\n\s]+?;
+lop = '&&' | '||';
 end = ';' | '\n';
