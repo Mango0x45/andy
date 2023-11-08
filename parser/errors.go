@@ -12,5 +12,5 @@ type errExpected struct {
 }
 
 func (e errExpected) Error() string {
-	return fmt.Sprintf("Expected %s but got ‘%s’", e.want, e.got)
+	return fmt.Sprintf("Expected %s but got %s", e.want, e.got)
 }

@@ -38,35 +38,35 @@ const maxStrLen = 20
 func (t Token) String() string {
 	switch t.Kind {
 	case TokError:
-		return "Error: " + t.Val
+		return "lexing error: " + t.Val
 
 	case TokEndStmt:
 		return "end of statement"
 	case TokEof:
-		return "EOF"
+		return "end of file"
 
 	case TokArg, TokString:
 		if len(t.Val) > maxStrLen {
-			return fmt.Sprintf("%.*s…", maxStrLen, t.Val)
+			return fmt.Sprintf("‘%.*s…’", maxStrLen, t.Val)
 		}
-		return t.Val
+		return "‘" + t.Val + "’"
 
 	case TokAppend:
-		return ">>"
+		return "‘>>’"
 	case TokClobber:
-		return ">|"
+		return "‘>|’"
 	case TokRead:
-		return "<"
+		return "‘<’"
 	case TokWrite:
-		return ">"
+		return "‘>’"
 
 	case TokPipe:
-		return "|"
+		return "‘|’"
 
 	case TokLAnd:
-		return "&&"
+		return "‘&&’"
 	case TokLOr:
-		return "||"
+		return "‘||’"
 	}
 
 	panic("unreachable")
