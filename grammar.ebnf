@@ -2,7 +2,7 @@
    unicode aware (‘\s’ matches all unicode spaces) *)
 
 program = cmdlist;
-cmdlist = pipeline, {lop, pipeline} end;
+cmdlist = pipeline, {lop, pipeline}, end;
 pipeline = simple, {'|', simple};
 simple = value, {value}, {redir};
 
