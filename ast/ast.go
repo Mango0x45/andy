@@ -11,9 +11,9 @@ import (
 // Program is a complete script
 type Program = []CommandList
 
-// XCommandList is a list of pipelines connected by binary operators, but in the
-// form of (op e1 (op e2 (op e3 (cons e4 nil)))) instead of the form we actually need of
-// (op (op (op (cons nil e1) e2) e3) e4).
+// XCommandList is a list of pipelines connected by binary operators, but in
+// the form of (op e1 (op e2 (op e3 (cons e4 nil)))) instead of the form we
+// actually need of (op (op (op (cons nil e1) e2) e3) e4).
 type XCommandList struct {
 	Lhs Pipeline
 	Op  BinaryOp
