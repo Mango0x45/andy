@@ -21,6 +21,9 @@ const (
 	TokWrite   // The ‘>’ operator
 
 	TokPipe // The ‘|’ operator
+
+	TokLAnd // The ‘&&’ operator
+	TokLOr  // The ‘|| operator
 )
 
 type Token struct {
@@ -59,6 +62,11 @@ func (t Token) String() string {
 
 	case TokPipe:
 		return "|"
+
+	case TokLAnd:
+		return "&&"
+	case TokLOr:
+		return "||"
 	}
 
 	panic("unreachable")

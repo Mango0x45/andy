@@ -12,14 +12,19 @@ import (
 
 const appendFlags = os.O_APPEND | os.O_CREATE | os.O_WRONLY
 
-var CrashOnError = false
+var (
+	CrashOnError = false
+	Interactive  = false
+
+	status = 0
+)
 
 func Exec(prog ast.Program) {
-	for _, cmd := range prog {
-		err := execCommand(cmd, streams{os.Stdin, os.Stdout, os.Stderr})
-		if err != nil {
-			fmt.Fprintf(os.Stderr, "andy: %s\n", err)
-
+	for _, cl := range prog {
+		ret := execCmdList(cl)
+		status = ret.ExitCode()
+		if _, ok := ret.(shellError); ok {
+			fmt.Fprintf(os.Stderr, "andy: %s\n", ret)
 			if CrashOnError {
 				os.Exit(1)
 			}
@@ -27,17 +32,61 @@ func Exec(prog ast.Program) {
 	}
 }
 
-func execCommand(cmd ast.Command, s streams) error {
-	switch cmd.(type) {
-	case ast.Simple:
-		return execSimple(cmd.(ast.Simple), s)
-	case ast.Compound:
-		return execCompound(cmd.(ast.Compound), s)
+func execCmdList(cl ast.CommandList) commandResult {
+	if cl.Lhs == nil {
+		return execPipeline(cl.Rhs)
 	}
-	panic("unreachable")
+
+	res := execCmdList(*cl.Lhs)
+	ec := res.ExitCode()
+
+	if cl.Op == ast.LAnd && ec == 0 || cl.Op == ast.LOr && ec != 0 {
+		return execPipeline(cl.Rhs)
+	}
+
+	return res
 }
 
-func execSimple(cmd ast.Simple, s streams) error {
+func execPipeline(pl ast.Pipeline) commandResult {
+	res := errExitCode(0)
+	wg := sync.WaitGroup{}
+
+	for i := range pl[:len(pl)-1] {
+		r, w, err := os.Pipe()
+		if err != nil {
+			return errInternal{err}
+		}
+
+		pl[i+0].Out = w
+		pl[i+1].In = r
+
+		go func(i int) {
+			wg.Add(1)
+			if ec := execSimple(pl[i]).ExitCode(); res == 0 && ec != 0 {
+				res = errExitCode(ec)
+			}
+			wg.Done()
+		}(i)
+	}
+
+	if ec := execSimple(pl[len(pl)-1]).ExitCode(); res == 0 && ec != 0 {
+		res = errExitCode(ec)
+	}
+	wg.Wait()
+	return res
+}
+
+func execSimple(cmd ast.Simple) commandResult {
+	if cmd.In != os.Stdin {
+		defer cmd.In.Close()
+	}
+	if cmd.Out != os.Stdout {
+		defer cmd.Out.Close()
+	}
+	if cmd.Err != os.Stderr {
+		defer cmd.Err.Close()
+	}
+
 	args := make([]string, 0, cap(cmd.Args))
 	for _, v := range cmd.Args {
 		switch v.(type) {
@@ -51,23 +100,19 @@ func execSimple(cmd ast.Simple, s streams) error {
 	}
 
 	c := exec.Command(args[0], args[1:]...)
-	c.Stdin, c.Stdout, c.Stderr = s.in, s.out, s.err
+	c.Stdin, c.Stdout, c.Stderr = cmd.In, cmd.Out, cmd.Err
 
 	for _, r := range cmd.Redirs {
 		var name string
-
 		switch r.File.(type) {
 		case ast.Argument:
 			name = string(r.File.(ast.Argument))
 
 			switch {
-			case r.Mode == ast.RedirRead && name == "_":
+			case r.Type == ast.RedirRead && name == "_":
 				name = os.DevNull
-			case r.Mode == ast.RedirWrite && name == "!":
-				r.Mode = ast.RedirWriteClob
-				name = os.Stderr.Name()
-			case r.Mode == ast.RedirWrite && name == "_":
-				r.Mode = ast.RedirWriteClob
+			case r.Type == ast.RedirWrite && name == "_":
+				r.Type = ast.RedirClob
 				name = os.DevNull
 			}
 		case ast.String:
@@ -76,18 +121,25 @@ func execSimple(cmd ast.Simple, s streams) error {
 			panic("unreachable")
 		}
 
-		switch r.Mode {
+		switch r.Type {
 		case ast.RedirAppend:
 			fp, err := os.OpenFile(name, appendFlags, 0666)
 			if err != nil {
-				return err
+				return errInternal{err}
+			}
+			defer fp.Close()
+			c.Stdout = fp
+		case ast.RedirClob:
+			fp, err := os.Create(name)
+			if err != nil {
+				return errInternal{err}
 			}
 			defer fp.Close()
 			c.Stdout = fp
 		case ast.RedirRead:
 			fp, err := os.Open(name)
 			if err != nil {
-				return err
+				return errInternal{err}
 			}
 			defer fp.Close()
 			c.Stdin = fp
@@ -97,7 +149,7 @@ func execSimple(cmd ast.Simple, s streams) error {
 			case errors.Is(err, os.ErrNotExist):
 				fp, err := os.Create(name)
 				if err != nil {
-					return err
+					return errInternal{err}
 				}
 				defer fp.Close()
 				c.Stdout = fp
@@ -106,56 +158,20 @@ func execSimple(cmd ast.Simple, s streams) error {
 			default: // File exists
 				return errClobber{name}
 			}
-		case ast.RedirWriteClob:
-			fp, err := os.Create(name)
-			if err != nil {
-				return err
-			}
-			defer fp.Close()
-			c.Stdout = fp
 		default:
 			panic("unreachable")
 		}
 	}
 
-	if s.in != os.Stdin {
-		defer s.in.Close()
-	}
-	if s.out != os.Stdout {
-		defer s.out.Close()
-	}
-	if s.err != os.Stderr {
-		defer s.err.Close()
-	}
-
 	if f, ok := builtins[c.Args[0]]; ok {
 		return f(c)
 	}
-	return c.Run()
-}
-
-func execCompound(cmd ast.Compound, s streams) error {
-	switch cmd.Op {
-	case ast.CompoundPipe:
-		return execPipe(cmd, s)
+	switch err := c.Run(); err.(type) {
+	case nil:
+		return errExitCode(0)
+	case *exec.ExitError:
+		return err.(*exec.ExitError)
+	default:
+		return errInternal{err}
 	}
-	panic("unreachable")
-}
-
-func execPipe(cmd ast.Compound, s streams) error {
-	r, w, err := os.Pipe()
-	if err != nil {
-		return errors.New("Failed to create pipe")
-	}
-
-	var el, er error
-	wg := sync.WaitGroup{}
-	go func() {
-		wg.Add(1)
-		el = execCommand(cmd.Lhs, streams{s.in, w, s.err})
-		wg.Done()
-	}()
-	er = execCommand(cmd.Rhs, streams{r, s.out, s.err})
-	wg.Wait()
-	return errors.Join(el, er)
 }

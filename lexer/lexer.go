@@ -32,12 +32,7 @@ func (l *lexer) Run() {
 }
 
 func (l *lexer) emit(t TokenType) {
-	tok := Token{
-		Kind: t,
-		Val:  l.input[l.start:l.pos],
-	}
-	// fmt.Printf("Token: %s\n", tok)
-	l.Out <- tok
+	l.Out <- Token{t, l.input[l.start:l.pos]}
 	l.start = l.pos
 }
 

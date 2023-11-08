@@ -15,7 +15,7 @@ func New(stream <-chan lexer.Token) *Parser {
 }
 
 func (p *Parser) Run() ast.Program {
-	return p.parseCommands()
+	return p.parseProgram()
 }
 
 func (p *Parser) next() lexer.Token {

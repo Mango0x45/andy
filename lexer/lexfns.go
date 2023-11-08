@@ -12,8 +12,10 @@ func lexDefault(l *lexer) lexFn {
 		case r == eof:
 			l.emit(TokEof)
 			return nil
+		case r == '&':
+			return lexAmp
 		case r == '|':
-			l.emit(TokPipe)
+			return lexPipe
 		case r == '"':
 			l.backup()
 			return lexStringDouble
@@ -29,10 +31,32 @@ func lexDefault(l *lexer) lexFn {
 	}
 }
 
+func lexAmp(l *lexer) lexFn {
+	switch l.peek() {
+	case '&':
+		l.next()
+		l.emit(TokLAnd)
+	default:
+		panic("Implement & operator")
+	}
+	return lexDefault
+}
+
+func lexPipe(l *lexer) lexFn {
+	switch l.peek() {
+	case '|':
+		l.next()
+		l.emit(TokLOr)
+	default:
+		l.emit(TokPipe)
+	}
+	return lexDefault
+}
+
 func lexArg(l *lexer) lexFn {
 	l.align()
 	for {
-		if r := l.next(); isMetachar(r) || unicode.IsSpace(r) || r == eof {
+		if r := l.next(); isMetachar(r) || isEol(r) || unicode.IsSpace(r) || r == eof {
 			l.backup()
 			l.emit(TokArg)
 			return lexDefault
