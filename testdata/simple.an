@@ -1,0 +1,6 @@
+# Builtin invocation
+echo hello world
+echo "this is a simple builtin-command"
+
+# Invocation of an actual process
+/bin/echo this is a simple external process

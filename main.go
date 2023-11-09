@@ -39,7 +39,7 @@ func repl() {
 			eprintln(err)
 		}
 
-		exec(line)
+		execStr(line)
 	}
 }
 
@@ -50,10 +50,10 @@ func file(f string) {
 		os.Exit(1)
 	}
 
-	exec(string(bytes))
+	execStr(string(bytes))
 }
 
-func exec(s string) {
+func execStr(s string) {
 	l := lexer.New(s)
 	p := parser.New(l.Out)
 	go l.Run()

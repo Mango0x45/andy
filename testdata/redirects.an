@@ -1,0 +1,19 @@
+# Writing to file
+echo foo >foo
+
+# Reading from file
+rev <foo
+
+# Reading- and writing to /dev/null; no-ops
+echo foo >_
+cat <_
+
+# File won’t clobber
+echo bar >foo || true
+
+# File clobbering
+echo foo >bar
+echo bar >|bar
+
+# File appending
+echo baz >>foo
