@@ -23,10 +23,20 @@ func lexDefault(l *lexer) lexFn {
 			l.emit(TokRead)
 		case r == '>':
 			return lexWrite
+		case r == '#':
+			return skipComment
 		case unicode.IsSpace(r):
 		default:
 			l.backup()
 			return lexArg
+		}
+	}
+}
+
+func skipComment(l *lexer) lexFn {
+	for {
+		if t := l.next(); t == '\n' || t == eof {
+			return lexDefault
 		}
 	}
 }
