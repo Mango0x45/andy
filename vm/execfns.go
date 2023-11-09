@@ -13,20 +13,20 @@ const appendFlags = os.O_APPEND | os.O_CREATE | os.O_WRONLY
 
 func (vm *Vm) execCmdList(cl ast.CommandList) commandResult {
 	if cl.Lhs == nil {
-		return execPipeline(cl.Rhs)
+		return vm.execPipeline(cl.Rhs)
 	}
 
 	res := vm.execCmdList(*cl.Lhs)
 	ec := res.ExitCode()
 
 	if cl.Op == ast.LAnd && ec == 0 || cl.Op == ast.LOr && ec != 0 {
-		return execPipeline(cl.Rhs)
+		return vm.execPipeline(cl.Rhs)
 	}
 
 	return res
 }
 
-func execPipeline(pl ast.Pipeline) commandResult {
+func (vm *Vm) execPipeline(pl ast.Pipeline) commandResult {
 	n := len(pl)
 
 	for i := range pl[:n-1] {
@@ -45,7 +45,7 @@ func execPipeline(pl ast.Pipeline) commandResult {
 
 	for _, cmd := range pl {
 		go func(cmd ast.Simple) {
-			c <- execSimple(cmd)
+			c <- vm.execSimple(cmd)
 			wg.Done()
 		}(cmd)
 	}
@@ -62,7 +62,7 @@ func execPipeline(pl ast.Pipeline) commandResult {
 	return errExitCode(0)
 }
 
-func execSimple(cmd ast.Simple) commandResult {
+func (vm *Vm) execSimple(cmd ast.Simple) commandResult {
 	if cmd.In != os.Stdin {
 		defer cmd.In.Close()
 	}
