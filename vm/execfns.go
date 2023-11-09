@@ -156,7 +156,7 @@ func execSimple(cmd ast.Simple) commandResult {
 	case nil:
 		return errExitCode(0)
 	case *exec.ExitError:
-		return err.(*exec.ExitError)
+		return errExitCode(err.(*exec.ExitError).ExitCode())
 	default:
 		return errInternal{err}
 	}

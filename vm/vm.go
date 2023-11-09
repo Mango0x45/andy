@@ -19,7 +19,7 @@ func New(interactive bool) *Vm {
 func (vm *Vm) Run(prog ast.Program) {
 	for _, cl := range prog {
 		ret := vm.execCmdList(cl)
-		vm.Status = uint8(ret.ExitCode())
+		vm.Status = ret.ExitCode()
 		if _, ok := ret.(shellError); ok {
 			fmt.Fprintf(os.Stderr, "andy: %s\n", ret)
 			if !vm.interactive {

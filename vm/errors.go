@@ -7,7 +7,7 @@ import (
 
 type commandResult interface {
 	error
-	ExitCode() int
+	ExitCode() uint8
 }
 
 type errFileOp struct {
@@ -16,7 +16,7 @@ type errFileOp struct {
 	err  error  // Error that caused this
 }
 
-func (e errFileOp) ExitCode() int {
+func (e errFileOp) ExitCode() uint8 {
 	return math.MaxUint8
 }
 
@@ -28,7 +28,7 @@ type errClobber struct {
 	file string // File related to the error
 }
 
-func (e errClobber) ExitCode() int {
+func (e errClobber) ExitCode() uint8 {
 	return math.MaxUint8
 }
 
@@ -37,10 +37,10 @@ func (e errClobber) Error() string {
 		e.file)
 }
 
-type errExitCode int
+type errExitCode uint8
 
-func (e errExitCode) ExitCode() int {
-	return int(e)
+func (e errExitCode) ExitCode() uint8 {
+	return uint8(e)
 }
 
 func (_ errExitCode) Error() string {
@@ -51,7 +51,7 @@ type errInternal struct {
 	e error
 }
 
-func (e errInternal) ExitCode() int {
+func (e errInternal) ExitCode() uint8 {
 	return math.MaxUint8
 }
 
