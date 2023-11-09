@@ -35,11 +35,11 @@ func TestSimple(t *testing.T) {
 	s := "hello world\n" +
 		"this is a simple builtin-command\n" +
 		"this is a simple external process\n"
-	runAndCapture(t, []string{"./simple.an"}, s, "")
+	runAndCapture(t, []string{"simple.an"}, s, "")
 }
 
 func TestRedirects(t *testing.T) {
-	runAndCapture(t, []string{"./redirects.an"}, "oof\n", "")
+	runAndCapture(t, []string{"redirects.an"}, "oof\n", "")
 
 	foo, _ := os.ReadFile("foo")
 	bar, _ := os.ReadFile("bar")
