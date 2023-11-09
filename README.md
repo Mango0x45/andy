@@ -19,8 +19,9 @@ a while.  The currently implemented features are:
 - [X] File appending (`>>`)
 - [X] File clobbering (`>|`)
 - [X] Read from /dev/null (`<_`)
-- [X] Write to /dev/null & /dev/stderr (`>_` & `>!`)
+- [X] Write to /dev/null (`>_`)
 - [X] Pipelines (`cmd1 | … | cmdN`)
+- [X] Condition chains (`cmd1 && … || cmdN`)
 
 ## Example
 
