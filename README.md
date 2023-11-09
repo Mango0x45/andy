@@ -25,6 +25,8 @@ a while.  The currently implemented features are:
 
 ## Example
 
+This is *very* early days and *very* likely to change.
+
 ```andy
 # Define a function ‘greet’ that takes an argument ‘name’
 fn greet name
