@@ -56,7 +56,7 @@ func (e errInternal) ExitCode() int {
 }
 
 func (e errInternal) Error() string {
-	return e.Error()
+	return e.e.Error()
 }
 
 type shellError interface {
