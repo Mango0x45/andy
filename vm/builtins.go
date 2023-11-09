@@ -24,10 +24,18 @@ func builtinEcho(cmd *exec.Cmd) commandResult {
 	return errExitCode(0)
 }
 
-func builtinFalse(_ *exec.Cmd) commandResult {
+func builtinFalse(cmd *exec.Cmd) commandResult {
+	n := len(cmd.Args) - 1
+	if n > 0 {
+		fmt.Fprintf(cmd.Stderr, "andy: %d arguments to ‘false’ are being ignored\n", n)
+	}
 	return errExitCode(1)
 }
 
-func builtinTrue(_ *exec.Cmd) commandResult {
+func builtinTrue(cmd *exec.Cmd) commandResult {
+	n := len(cmd.Args) - 1
+	if n > 0 {
+		fmt.Fprintf(cmd.Stderr, "andy: %d arguments to ‘true’ are being ignored\n", n)
+	}
 	return errExitCode(0)
 }
