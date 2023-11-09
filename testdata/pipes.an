@@ -1,0 +1,16 @@
+echo foo bar | rev
+
+echo "hello there
+wonderful world"
+
+# Keep only the last line
+| tail -n1
+
+# Uppercase vowels
+| sed "s/[aeiou]/\U&/g"
+
+# Get the second word
+| cut -d " " -f2
+
+# No-op
+echo foo >_ | grep bar

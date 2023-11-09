@@ -54,3 +54,9 @@ func TestRedirects(t *testing.T) {
 	os.Remove("foo")
 	os.Remove("bar")
 }
+
+func TestPipes(t *testing.T) {
+	s := "rab oof\n" +
+		"wOrld\n"
+	runAndCapture(t, []string{"pipes.an"}, s, "")
+}
