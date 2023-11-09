@@ -16,10 +16,19 @@ var builtins = map[string]builtin{
 	"true":  builtinTrue,
 }
 
+var cdStack *stack[string] = newStack[string](64)
+
 func builtinCd(cmd *exec.Cmd) commandResult {
 	var dst string
 	switch len(cmd.Args) {
 	case 1:
+		cwd, err := os.Getwd()
+		if err != nil {
+			fmt.Fprintf(cmd.Stderr, "cd: %s\n", err)
+			return errExitCode(1)
+		}
+		cdStack.push(cwd)
+
 		user, err := user.Current()
 		if err != nil {
 			return errInternal{err}
@@ -27,6 +36,21 @@ func builtinCd(cmd *exec.Cmd) commandResult {
 		dst = user.HomeDir
 	case 2:
 		dst = cmd.Args[1]
+		if dst == "-" {
+			maybe := cdStack.pop()
+			if maybe == nil {
+				fmt.Fprintln(cmd.Stderr, "cd: the directory stack is empty")
+				return errExitCode(1)
+			}
+			dst = *maybe
+		} else {
+			cwd, err := os.Getwd()
+			if err != nil {
+				fmt.Fprintf(cmd.Stderr, "cd: %s\n", err)
+				return errExitCode(1)
+			}
+			cdStack.push(cwd)
+		}
 	default:
 		fmt.Fprintln(cmd.Stderr, "Usage: cd [directory]")
 		return errExitCode(1)
