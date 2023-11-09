@@ -48,10 +48,9 @@ func execCmdList(cl ast.CommandList) commandResult {
 }
 
 func execPipeline(pl ast.Pipeline) commandResult {
-	res := errExitCode(0)
-	wg := sync.WaitGroup{}
+	n := len(pl)
 
-	for i := range pl[:len(pl)-1] {
+	for i := range pl[:n-1] {
 		r, w, err := os.Pipe()
 		if err != nil {
 			return errInternal{err}
@@ -59,21 +58,29 @@ func execPipeline(pl ast.Pipeline) commandResult {
 
 		pl[i+0].Out = w
 		pl[i+1].In = r
+	}
 
-		go func(i int) {
-			wg.Add(1)
-			if ec := execSimple(pl[i]).ExitCode(); res == 0 && ec != 0 {
-				res = errExitCode(ec)
-			}
+	c := make(chan commandResult, n)
+	wg := sync.WaitGroup{}
+	wg.Add(n)
+
+	for _, cmd := range pl {
+		go func(cmd ast.Simple) {
+			c <- execSimple(cmd)
 			wg.Done()
-		}(i)
+		}(cmd)
 	}
 
-	if ec := execSimple(pl[len(pl)-1]).ExitCode(); res == 0 && ec != 0 {
-		res = errExitCode(ec)
-	}
 	wg.Wait()
-	return res
+	close(c)
+
+	for res := range c {
+		if res.ExitCode() != 0 {
+			return res
+		}
+	}
+
+	return errExitCode(0)
 }
 
 func execSimple(cmd ast.Simple) commandResult {
