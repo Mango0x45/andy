@@ -26,9 +26,10 @@ func main() {
 
 func repl() {
 	r := bufio.NewReader(os.Stdin)
+	v := vm.New(true)
 
 	for {
-		fmt.Fprint(os.Stderr, "$ ")
+		fmt.Fprintf(os.Stderr, "[%d] > ", v.Status)
 		line, err := r.ReadString('\n')
 
 		switch {
@@ -39,7 +40,10 @@ func repl() {
 			eprintln(err)
 		}
 
-		execStr(line)
+		l := lexer.New(line)
+		p := parser.New(l.Out)
+		go l.Run()
+		v.Run(p.Run())
 	}
 }
 
@@ -50,14 +54,11 @@ func file(f string) {
 		os.Exit(1)
 	}
 
-	execStr(string(bytes))
-}
-
-func execStr(s string) {
-	l := lexer.New(s)
+	l := lexer.New(string(bytes))
 	p := parser.New(l.Out)
+	v := vm.New(false)
 	go l.Run()
-	vm.Exec(p.Run())
+	v.Run(p.Run())
 }
 
 func eprintln(e error) {
