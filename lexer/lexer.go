@@ -2,8 +2,6 @@ package lexer
 
 import (
 	"fmt"
-	"math"
-	"strings"
 	"unicode/utf8"
 )
 
