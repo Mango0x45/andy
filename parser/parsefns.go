@@ -55,6 +55,10 @@ func (p *Parser) parseXCommandList() ast.XCommandList {
 		}
 
 		p.next() // Consume operator
+		for p.peek().Kind == lexer.TokEndStmt {
+			p.next()
+		}
+
 		rhs := p.parseXCommandList()
 		cmdList.Rhs = &rhs
 	}
