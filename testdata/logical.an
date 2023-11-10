@@ -1,0 +1,19 @@
+echo foo && echo bar && echo baz
+
+echo foo
+
+&& echo bar
+
+&& echo baz
+
+|| echo "chain failed"
+
+false
+&& echo bar
+&& echo baz
+|| echo "chain failed"
+
+true
+&& echo bar
+&& false
+|| echo "chain failed"

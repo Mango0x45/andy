@@ -60,3 +60,16 @@ func TestPipes(t *testing.T) {
 		"wOrld\n"
 	runAndCapture(t, []string{"pipes.an"}, s, "")
 }
+
+func TestLogical(t *testing.T) {
+	s := "foo\n" +
+		"bar\n" +
+		"baz\n" +
+		"foo\n" +
+		"bar\n" +
+		"baz\n" +
+		"chain failed\n" +
+		"bar\n" +
+		"chain failed\n"
+	runAndCapture(t, []string{"logical.an"}, s, "")
+}
