@@ -73,7 +73,7 @@ func lexPipe(l *lexer) lexFn {
 }
 
 func lexArg(l *lexer) lexFn {
-	l.align()
+	l.start = l.pos
 	for {
 		if r := l.next(); isMetachar(r) || isEol(r) || unicode.IsSpace(r) || r == eof {
 			l.backup()

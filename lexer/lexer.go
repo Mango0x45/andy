@@ -58,31 +58,6 @@ func (l *lexer) backup() {
 	l.pos -= l.width
 }
 
-func (l *lexer) align() {
-	l.start = l.pos
-}
-
-func (l *lexer) accept(valid string) bool {
-	if strings.IndexRune(valid, l.next()) != -1 {
-		return true
-	}
-	l.backup()
-	return false
-}
-
-func (l *lexer) acceptRun(valid string) int {
-	return l.acceptNRun(valid, math.MaxInt)
-}
-
-func (l *lexer) acceptNRun(valid string, m int) int {
-	n := 0
-	for strings.IndexRune(valid, l.next()) != -1 && n < m {
-		n++
-	}
-	l.backup()
-	return n
-}
-
 func (l *lexer) errorf(format string, args ...any) lexFn {
 	l.Out <- Token{
 		Kind: TokError,
