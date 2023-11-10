@@ -1,6 +1,15 @@
 package lexer
 
-import "unicode"
+import (
+	"strings"
+	"unicode"
+)
+
+var backslashEsc = map[rune]rune{
+	'\\': '\\',
+	'n':  '\n',
+	't':  '\t',
+}
 
 type lexFn func(*lexer) lexFn
 
@@ -76,19 +85,25 @@ func lexArg(l *lexer) lexFn {
 
 func lexStringDouble(l *lexer) lexFn {
 	l.next() // Consume quote
-	l.align()
 
-	for r := l.next(); r != '"'; {
-		if r == eof {
+	sb := strings.Builder{}
+	for {
+		switch r := l.next(); r {
+		case eof:
 			return l.errorf("unterminated string")
+		case '\\':
+			r, ok := backslashEsc[l.next()]
+			if !ok {
+				return l.errorf("invalid escape sequence ‘\\%c’", r)
+			}
+			sb.WriteRune(r)
+		case '"':
+			l.Out <- Token{TokString, sb.String()}
+			return lexDefault
+		default:
+			sb.WriteRune(r)
 		}
-		r = l.next()
 	}
-
-	l.backup()
-	l.emit(TokString)
-	l.next()
-	return lexDefault
 }
 
 func lexWrite(l *lexer) lexFn {

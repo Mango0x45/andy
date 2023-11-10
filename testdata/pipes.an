@@ -7,7 +7,7 @@ wonderful world"
 | tail -n1
 
 # Uppercase vowels
-| sed "s/[aeiou]/\U&/g"
+| sed "s/[aeiou]/\\U&/g"
 
 # Get the second word
 | cut -d " " -f2
