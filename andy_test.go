@@ -62,14 +62,14 @@ func TestPipes(t *testing.T) {
 }
 
 func TestLogical(t *testing.T) {
-	s := "foo\n" +
-		"bar\n" +
-		"baz\n" +
-		"foo\n" +
-		"bar\n" +
-		"baz\n" +
-		"chain failed\n" +
-		"bar\n" +
-		"chain failed\n"
+	s := "foo1\n" +
+		"bar1\n" +
+		"baz1\n" +
+		"foo2\n" +
+		"bar2\n" +
+		"baz2\n" +
+		"chain failed3\n" +
+		"bar4\n" +
+		"chain failed4\n"
 	runAndCapture(t, []string{"logical.an"}, s, "")
 }

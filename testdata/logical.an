@@ -1,19 +1,19 @@
-echo foo && echo bar && echo baz
+echo foo1 && echo bar1 && echo baz1
 
-echo foo
+echo foo2
 
-&& echo bar
+&& echo bar2
 
-&& echo baz
+&& echo baz2
 
-|| echo "chain failed"
+|| echo "chain failed2"
 
-false
-&& echo bar
-&& echo baz
-|| echo "chain failed"
+false &&
+echo bar3 &&
+echo baz3 ||
+echo "chain failed3"
 
 true
-&& echo bar
+&& echo bar4
 && false
-|| echo "chain failed"
+|| echo "chain failed4"
