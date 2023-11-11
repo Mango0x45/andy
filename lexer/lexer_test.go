@@ -13,6 +13,34 @@ func TestNext(t *testing.T) {
 	}
 
 	if r := l.next(); r != eof {
-		t.Fatalf("Expected eof but got ‘%c’", r)
+		t.Fatalf("Expected ‘eof’ but got ‘%c’", r)
 	}
+}
+
+func TestPeek(t *testing.T) {
+	s := "¢ȠʗǱɓǇϴ¤Ίϑ'щƎcɛǩΟȏɁƅ"
+	l := New(s)
+	chk := func(x, y rune) {
+		if x != y {
+			t.Fatalf("Expected ‘%c’ but got ‘%c’", x, y)
+		}
+	}
+
+	rs := []rune(s)
+	chk(l.peek(), rs[0])
+	chk(l.peek(), rs[0])
+
+	l.next()
+	l.next()
+
+	chk(l.peek(), rs[2])
+	chk(l.peek(), rs[2])
+
+	l.next()
+	l.next()
+	l.next()
+	l.next()
+
+	chk(l.peek(), rs[6])
+	chk(l.peek(), rs[6])
 }
