@@ -13,7 +13,7 @@ echo bar >foo || true
 
 # File clobbering
 echo foo >bar
-echo bar >|bar
+echo bar >!bar
 
 # File appending
 echo baz >>foo

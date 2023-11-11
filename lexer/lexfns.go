@@ -109,7 +109,7 @@ func lexStringDouble(l *lexer) lexFn {
 
 func lexWrite(l *lexer) lexFn {
 	switch l.peek() {
-	case '|':
+	case '!':
 		l.next()
 		l.emit(TokClobber)
 	case '>':

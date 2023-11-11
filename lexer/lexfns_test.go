@@ -37,7 +37,7 @@ func TestEmitTokenTypes(t *testing.T) {
 		TokRead, TokArg, TokRead, TokArg, TokEof,
 	}
 	s := `
-	echo "hello world!"; cat my-file | tac && printf >| that was a no-op
+	echo "hello world!"; cat my-file | tac && printf >! that was a no-op
 
 	# IGNOREME
 
@@ -65,3 +65,5 @@ func TestSkipComment(t *testing.T) {
 
 	assertTokens(t, xs, getTokens(s))
 }
+
+

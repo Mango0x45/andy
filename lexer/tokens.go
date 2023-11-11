@@ -16,7 +16,7 @@ const (
 	TokString // A quoted string
 
 	TokAppend  // The ‘>>’ operator
-	TokClobber // The ‘>|’ operator
+	TokClobber // The ‘>!’ operator
 	TokRead    // The ‘<’ operator
 	TokWrite   // The ‘>’ operator
 
@@ -54,7 +54,7 @@ func (t Token) String() string {
 	case TokAppend:
 		return "‘>>’"
 	case TokClobber:
-		return "‘>|’"
+		return "‘>!’"
 	case TokRead:
 		return "‘<’"
 	case TokWrite:

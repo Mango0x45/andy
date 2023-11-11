@@ -17,7 +17,7 @@ a while.  The currently implemented features are:
 - [X] File reading (`<`)
 - [X] File writing (`>`)
 - [X] File appending (`>>`)
-- [X] File clobbering (`>|`)
+- [X] File clobbering (`>!`)
 - [X] Read from /dev/null (`<_`)
 - [X] Write to /dev/null (`>_`)
 - [X] Pipelines (`cmd1 | … | cmdN`)
@@ -29,7 +29,8 @@ a while.  The currently implemented features are:
 
 ## Example
 
-This is *very* early days and *very* likely to change.
+This is *very* early days and *very* likely to change.  Also some of it is
+already outdated.
 
 ```andy
 # Define a function ‘greet’ that takes an argument ‘name’
