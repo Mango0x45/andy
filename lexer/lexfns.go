@@ -45,6 +45,7 @@ func lexDefault(l *lexer) lexFn {
 func skipComment(l *lexer) lexFn {
 	for {
 		if t := l.next(); t == '\n' || t == eof {
+			l.backup()
 			return lexDefault
 		}
 	}
