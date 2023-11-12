@@ -7,8 +7,14 @@ import (
 
 var backslashEsc = map[rune]rune{
 	'\\': '\\',
+	'0':  '\000',
+	'a':  '\a',
+	'b':  '\b',
+	'f':  '\f',
 	'n':  '\n',
+	'r':  '\r',
 	't':  '\t',
+	'v':  '\v',
 }
 
 type lexFn func(*lexer) lexFn
