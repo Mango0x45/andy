@@ -33,7 +33,7 @@ func (e errClobber) ExitCode() uint8 {
 }
 
 func (e errClobber) Error() string {
-	return fmt.Sprintf("Won’t clobber file ‘%s’; did you mean to use ‘>|’?",
+	return fmt.Sprintf("Won’t clobber file ‘%s’; did you mean to use ‘>!’?",
 		e.file)
 }
 

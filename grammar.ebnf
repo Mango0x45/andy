@@ -9,7 +9,7 @@ simple = value, {value}, {redir};
 redir =
 	( '<'
 	| '>'
-	| '>|'
+	| '>!'
 	| '>>'
 	), value;
 value = arg | string;
