@@ -82,13 +82,14 @@ func lexPipe(l *lexer) lexFn {
 
 func lexArg(l *lexer) lexFn {
 	l.start = l.pos
-	for {
-		if r := l.next(); isMetachar(r) || isEol(r) || unicode.IsSpace(r) || r == eof {
-			l.backup()
-			l.emit(TokArg)
-			return lexDefault
-		}
+	l.pos += strings.IndexFunc(l.input[l.pos:], func(r rune) bool {
+		return unicode.IsSpace(r) || isMetachar(r) || isEol(r)
+	})
+	if l.pos < l.start { // EOF reached
+		l.pos = len(l.input)
 	}
+	l.emit(TokArg)
+	return lexDefault
 }
 
 func lexStringSingle(l *lexer) lexFn {
