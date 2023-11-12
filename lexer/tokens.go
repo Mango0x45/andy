@@ -52,7 +52,7 @@ func (t Token) String() string {
 		}
 		return "‘" + t.Val + "’"
 	case TokConcat:
-		return "string concatination"
+		return "value concatination"
 
 	case TokAppend:
 		return "‘>>’"
