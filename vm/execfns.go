@@ -2,6 +2,7 @@ package vm
 
 import (
 	"errors"
+	"fmt"
 	"os"
 	"os/exec"
 	"sync"
@@ -75,14 +76,7 @@ func (vm *Vm) execSimple(cmd ast.Simple) commandResult {
 
 	args := make([]string, 0, cap(cmd.Args))
 	for _, v := range cmd.Args {
-		switch v.(type) {
-		case ast.Argument:
-			args = append(args, string(v.(ast.Argument)))
-		case ast.String:
-			args = append(args, string(v.(ast.String)))
-		default:
-			panic("unreachable")
-		}
+		args = append(args, v.ToStrings()...)
 	}
 
 	c := exec.Command(args[0], args[1:]...)
@@ -101,10 +95,15 @@ func (vm *Vm) execSimple(cmd ast.Simple) commandResult {
 				r.Type = ast.RedirClob
 				name = os.DevNull
 			}
-		case ast.String:
-			name = string(r.File.(ast.String))
 		default:
-			panic("unreachable")
+			xs := r.File.ToStrings()
+			if len(xs) > 1 {
+				return errExpected{
+					want: "filename",
+					got:  fmt.Sprintf("%d filesnames", len(xs)),
+				}
+			}
+			name = xs[0]
 		}
 
 		switch r.Type {

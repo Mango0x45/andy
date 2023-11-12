@@ -84,23 +84,9 @@ func (p *Parser) parseSimple() ast.Simple {
 	args := make([]ast.Value, 0, 4) // Add a little capacity
 	var redirs []ast.Redirect
 
-	switch t := p.next(); t.Kind {
-	case lexer.TokArg, lexer.TokString:
-		args = append(args, ast.NewValue(t))
-	default:
-		die(errExpected{"command", t})
-	}
-
-outer:
-	for {
-		switch t := p.peek(); t.Kind {
-		case lexer.TokArg, lexer.TokString:
-			args = append(args, ast.NewValue(t))
-		default:
-			break outer
-		}
-
-		p.next()
+	args = append(args, p.parseValue())
+	for ast.IsValue(p.peek().Kind) {
+		args = append(args, p.parseValue())
 	}
 
 	for {
@@ -109,9 +95,9 @@ outer:
 			p.next()
 			r := ast.NewRedir(t.Kind)
 
-			switch t := p.next(); t.Kind {
-			case lexer.TokArg, lexer.TokString:
-				r.File = ast.NewValue(t)
+			switch {
+			case ast.IsValue(p.peek().Kind):
+				r.File = p.parseValue()
 			default:
 				die(errExpected{"file after redirect", t})
 			}
@@ -127,6 +113,24 @@ outer:
 			}
 		}
 	}
+}
+
+func (p *Parser) parseValue() ast.Value {
+	var v ast.Value
+
+	switch t := p.next(); t.Kind {
+	case lexer.TokArg, lexer.TokString:
+		v = ast.NewValue(t)
+	default:
+		die(errExpected{"value", t})
+	}
+
+	if p.peek().Kind == lexer.TokConcat {
+		p.next()
+		v = ast.Concat{Lhs: v, Rhs: p.parseValue()}
+	}
+
+	return v
 }
 
 func die(e error) {

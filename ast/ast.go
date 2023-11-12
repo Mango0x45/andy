@@ -68,7 +68,7 @@ func NewRedir(k lexer.TokenType) Redirect {
 
 // Value is anything that can be turned into a (list of) string(s)
 type Value interface {
-	isValue()
+	ToStrings() []string
 }
 
 func NewValue(t lexer.Token) Value {
@@ -82,10 +82,34 @@ func NewValue(t lexer.Token) Value {
 }
 
 type Argument string
+
+func (a Argument) ToStrings() []string {
+	return []string{string(a)}
+}
+
 type String string
 
-func (_ Argument) isValue() {}
-func (_ String) isValue()   {}
+func (s String) ToStrings() []string {
+	return []string{string(s)}
+}
+
+type Concat struct {
+	Lhs, Rhs Value
+}
+
+func (c Concat) ToStrings() []string {
+	xs := c.Lhs.ToStrings()
+	ys := c.Rhs.ToStrings()
+	zs := make([]string, 0, len(xs)*len(ys))
+
+	for _, x := range xs {
+		for _, y := range ys {
+			zs = append(zs, x+y)
+		}
+	}
+
+	return zs
+}
 
 type BinaryOp int
 

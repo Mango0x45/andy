@@ -59,6 +59,18 @@ func (e errInternal) Error() string {
 	return e.e.Error()
 }
 
+type errExpected struct {
+	want, got string
+}
+
+func (e errExpected) ExitCode() uint8 {
+	return math.MaxUint8
+}
+
+func (e errExpected) Error() string {
+	return fmt.Sprintf("Expected %s but got %s", e.want, e.got)
+}
+
 type shellError interface {
 	isShellError()
 }
@@ -66,3 +78,4 @@ type shellError interface {
 func (_ errClobber) isShellError()  {}
 func (_ errFileOp) isShellError()   {}
 func (_ errInternal) isShellError() {}
+func (_ errExpected) isShellError() {}

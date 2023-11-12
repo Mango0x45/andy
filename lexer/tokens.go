@@ -13,6 +13,7 @@ const (
 	TokEof     // End of file
 
 	TokArg    // An unquoted string
+	TokConcat // Concatination between two values
 	TokString // A quoted string
 
 	TokAppend  // The ‘>>’ operator
@@ -50,6 +51,8 @@ func (t Token) String() string {
 			return fmt.Sprintf("‘%.*s…’", maxStrLen, t.Val)
 		}
 		return "‘" + t.Val + "’"
+	case TokConcat:
+		return "string concatination"
 
 	case TokAppend:
 		return "‘>>’"

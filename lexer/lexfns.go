@@ -89,7 +89,7 @@ func lexArg(l *lexer) lexFn {
 		l.pos = len(l.input)
 	}
 	l.emit(TokArg)
-	return lexDefault
+	return lexMaybeConcat
 }
 
 func lexStringSingle(l *lexer) lexFn {
@@ -104,7 +104,7 @@ func lexStringSingle(l *lexer) lexFn {
 
 	l.emit(TokString)
 	l.pos += n
-	return lexDefault
+	return lexMaybeConcat
 }
 
 func lexStringDouble(l *lexer) lexFn {
@@ -123,11 +123,26 @@ func lexStringDouble(l *lexer) lexFn {
 			sb.WriteRune(r)
 		case '"':
 			l.Out <- Token{TokString, sb.String()}
-			return lexDefault
+			return lexMaybeConcat
 		default:
 			sb.WriteRune(r)
 		}
 	}
+}
+
+func lexMaybeConcat(l *lexer) lexFn {
+	switch r := l.peek(); {
+	case r == '\'':
+		l.emit(TokConcat)
+		return lexStringSingle
+	case r == '"':
+		l.emit(TokConcat)
+		return lexStringDouble
+	case unicode.IsSpace(r) || isMetachar(r) || isEol(r) || r == eof:
+		return lexDefault
+	}
+	l.emit(TokConcat)
+	return lexArg
 }
 
 func lexWrite(l *lexer) lexFn {
