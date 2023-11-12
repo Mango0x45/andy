@@ -25,6 +25,9 @@ const (
 
 	TokLAnd // The ‘&&’ operator
 	TokLOr  // The ‘||’ operator
+
+	TokPOpen  // The opening parenthesis of a list
+	TokPClose // The closing parenthesis of a list
 )
 
 type Token struct {
@@ -70,6 +73,11 @@ func (t Token) String() string {
 		return "‘&&’"
 	case TokLOr:
 		return "‘||’"
+
+	case TokPOpen:
+		return "‘(’"
+	case TokPClose:
+		return "‘)’"
 	}
 
 	panic("unreachable")

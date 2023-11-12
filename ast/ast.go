@@ -111,6 +111,16 @@ func (c Concat) ToStrings() []string {
 	return zs
 }
 
+type List []Value
+
+func (l List) ToStrings() []string {
+	xs := make([]string, 0, len(l))
+	for _, x := range l {
+		xs = append(xs, x.ToStrings()...)
+	}
+	return xs
+}
+
 type BinaryOp int
 
 const (

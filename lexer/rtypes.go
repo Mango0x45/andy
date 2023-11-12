@@ -6,7 +6,9 @@ func isMetachar(r rune) bool {
 		r == '|' ||
 		r == '>' ||
 		r == '<' ||
-		r == '&'
+		r == '&' ||
+		r == '(' ||
+		r == ')'
 }
 
 func isEol(r rune) bool {

@@ -103,7 +103,9 @@ func (p *Parser) parseSimple() ast.Simple {
 			}
 
 			redirs = append(redirs, r)
-		case t.Kind == lexer.TokEndStmt || t.Kind == lexer.TokEof:
+		case ast.IsValue(t.Kind):
+			die(errExpected{"semicolon or newline", t})
+		default:
 			return ast.Simple{
 				Args:   args,
 				Redirs: redirs,
@@ -111,8 +113,6 @@ func (p *Parser) parseSimple() ast.Simple {
 				Out:    os.Stdout,
 				Err:    os.Stderr,
 			}
-		default:
-			die(errExpected{"semicolon or newline", t})
 		}
 	}
 }
@@ -123,6 +123,8 @@ func (p *Parser) parseValue() ast.Value {
 	switch t := p.next(); t.Kind {
 	case lexer.TokArg, lexer.TokString:
 		v = ast.NewValue(t)
+	case lexer.TokPOpen:
+		v = p.parseList()
 	default:
 		die(errExpected{"value", t})
 	}
@@ -133,6 +135,23 @@ func (p *Parser) parseValue() ast.Value {
 	}
 
 	return v
+}
+
+func (p *Parser) parseList() ast.List {
+	xs := ast.List{}
+
+	for {
+		switch t := p.next(); t.Kind {
+		case lexer.TokPClose:
+			return xs
+		case lexer.TokArg, lexer.TokString:
+			xs = append(xs, ast.NewValue(t))
+		case lexer.TokPOpen:
+			xs = append(xs, p.parseList()...)
+		default:
+			die(errExpected{"list item", t})
+		}
+	}
 }
 
 func die(e error) {

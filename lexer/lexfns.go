@@ -41,6 +41,11 @@ func lexDefault(l *lexer) lexFn {
 			l.emit(TokRead)
 		case r == '>':
 			return lexWrite
+		case r == '(':
+			l.emit(TokPOpen)
+		case r == ')':
+			l.emit(TokPClose)
+			return lexMaybeConcat
 		case r == '#':
 			return skipComment
 		case unicode.IsSpace(r):
@@ -138,6 +143,9 @@ func lexMaybeConcat(l *lexer) lexFn {
 	case r == '"':
 		l.emit(TokConcat)
 		return lexStringDouble
+	case r == '(':
+		l.emit(TokConcat)
+		return lexDefault
 	case unicode.IsSpace(r) || isMetachar(r) || isEol(r) || r == eof:
 		return lexDefault
 	}

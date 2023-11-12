@@ -26,7 +26,7 @@ func assertTokens(t *testing.T, xs, ys []TokenType) {
 	}
 }
 
-func TestEmitTokenTypes(t *testing.T) {
+func TestEmitTokenTypes1(t *testing.T) {
 	xs := []TokenType{
 		TokEndStmt, TokArg, TokString, TokEndStmt, TokArg, TokArg, TokPipe,
 		TokArg, TokLAnd, TokArg, TokClobber, TokArg, TokArg, TokArg, TokArg,
@@ -45,6 +45,19 @@ func TestEmitTokenTypes(t *testing.T) {
 	| another-cmd -f >> "foo.bar" -v
 
 	| cmd  <there <is <a <''nob'reak'' < space < there`
+
+	assertTokens(t, xs, getTokens(s))
+}
+
+func TestEmitTokenTypes2(t *testing.T) {
+	xs := []TokenType{
+		TokEndStmt, TokArg, TokPOpen, TokArg, TokArg, TokPClose, TokConcat,
+		TokArg, TokEndStmt, TokArg, TokArg, TokConcat, TokPOpen, TokArg,
+		TokArg, TokPClose, TokEof,
+	}
+	s := `
+	echo (foo bar).c
+	echo foo(bar baz)`
 
 	assertTokens(t, xs, getTokens(s))
 }

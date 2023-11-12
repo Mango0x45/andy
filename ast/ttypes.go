@@ -12,5 +12,6 @@ func IsRedir(kind lexer.TokenType) bool {
 func IsValue(kind lexer.TokenType) bool {
 	return kind == lexer.TokArg ||
 		kind == lexer.TokString ||
-		kind == lexer.TokConcat
+		kind == lexer.TokConcat ||
+		kind == lexer.TokPOpen
 }
