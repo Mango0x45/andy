@@ -49,12 +49,10 @@ func lexDefault(l *lexer) lexFn {
 }
 
 func skipComment(l *lexer) lexFn {
-	for {
-		if t := l.next(); t == '\n' || t == eof {
-			l.backup()
-			return lexDefault
-		}
+	if i := strings.IndexByte(l.input[l.pos:], '\n'); i != -1 {
+		l.pos += i
 	}
+	return lexDefault
 }
 
 func lexAmp(l *lexer) lexFn {
