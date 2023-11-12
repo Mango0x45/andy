@@ -65,5 +65,3 @@ func TestSkipComment(t *testing.T) {
 
 	assertTokens(t, xs, getTokens(s))
 }
-
-
