@@ -103,7 +103,7 @@ func (p *Parser) parseSimple() ast.Simple {
 			}
 
 			redirs = append(redirs, r)
-		default:
+		case t.Kind == lexer.TokEndStmt || t.Kind == lexer.TokEof:
 			return ast.Simple{
 				Args:   args,
 				Redirs: redirs,
@@ -111,6 +111,8 @@ func (p *Parser) parseSimple() ast.Simple {
 				Out:    os.Stdout,
 				Err:    os.Stderr,
 			}
+		default:
+			die(errExpected{"semicolon or newline", t})
 		}
 	}
 }
