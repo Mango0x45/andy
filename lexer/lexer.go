@@ -31,7 +31,6 @@ func (l *lexer) Run() {
 
 func (l *lexer) emit(t TokenType) {
 	l.Out <- Token{t, l.input[l.start:l.pos]}
-	l.start = l.pos
 }
 
 func (l *lexer) next() rune {
