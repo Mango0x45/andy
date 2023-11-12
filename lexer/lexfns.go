@@ -31,6 +31,9 @@ func lexDefault(l *lexer) lexFn {
 			return lexAmp
 		case r == '|':
 			return lexPipe
+		case r == '\'':
+			l.backup()
+			return lexStringSingle
 		case r == '"':
 			l.backup()
 			return lexStringDouble
@@ -86,6 +89,21 @@ func lexArg(l *lexer) lexFn {
 			return lexDefault
 		}
 	}
+}
+
+func lexStringSingle(l *lexer) lexFn {
+	start := l.pos
+	n := l.acceptRun('\'')
+	l.start = l.pos
+
+	l.pos += strings.Index(l.input[l.pos:], l.input[start:start+n])
+	if l.pos < l.start {
+		return l.errorf("unterminated string")
+	}
+
+	l.emit(TokString)
+	l.pos += n
+	return lexDefault
 }
 
 func lexStringDouble(l *lexer) lexFn {

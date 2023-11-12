@@ -55,6 +55,15 @@ func (l *lexer) backup() {
 	l.pos -= l.width
 }
 
+func (l *lexer) acceptRun(r rune) int {
+	m := 0
+	for l.next() == r {
+		m++
+	}
+	l.backup()
+	return m
+}
+
 func (l *lexer) errorf(format string, args ...any) lexFn {
 	l.Out <- Token{
 		Kind: TokError,

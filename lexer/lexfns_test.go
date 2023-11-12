@@ -33,7 +33,7 @@ func TestEmitTokenTypes(t *testing.T) {
 		TokEndStmt, TokEndStmt, TokEndStmt, TokEndStmt, TokArg, TokRead,
 		TokArg, TokWrite, TokArg, TokEndStmt, TokPipe, TokArg, TokArg,
 		TokAppend, TokString, TokArg, TokEndStmt, TokEndStmt, TokPipe, TokArg,
-		TokRead, TokArg, TokRead, TokArg, TokRead, TokArg, TokRead, TokArg,
+		TokRead, TokArg, TokRead, TokArg, TokRead, TokArg, TokRead, TokString,
 		TokRead, TokArg, TokRead, TokArg, TokEof,
 	}
 	s := `
@@ -44,7 +44,7 @@ func TestEmitTokenTypes(t *testing.T) {
 	cmd <file >file
 	| another-cmd -f >> "foo.bar" -v
 
-	| cmd  <there <is <a <nobreak < space < there`
+	| cmd  <there <is <a <''nob'reak'' < space < there`
 
 	assertTokens(t, xs, getTokens(s))
 }
