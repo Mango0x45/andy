@@ -85,11 +85,21 @@ func (p *Parser) parseCommand() ast.Command {
 	case t.Kind == lexer.TokArg && t.Val == "if":
 		p.next()
 		return p.parseIf()
+	case t.Kind == lexer.TokArg && t.Val == "while":
+		p.next()
+		return p.parseWhile()
 	case t.Kind == lexer.TokBOpen:
 		p.next()
 		return p.parseCompound()
 	}
 	return p.parseSimple()
+}
+
+func (p *Parser) parseWhile() *ast.While {
+	return &ast.While{
+		Cond: p.parseCommandList(),
+		Body: p.parseCommandList(),
+	}
 }
 
 func (p *Parser) parseIf() *ast.If {

@@ -31,6 +31,7 @@ a while.  The currently implemented features are:
 - [X] Cartesian product list concationation (`(foo bar).c; (a b)(c d)`)
 - [X] Compound commands (`{ cmd; cmd }`)
 - [X] If(-else) expressions (`if cmd; cmd; else cmd`)
+- [X] While expressions (`while cmd; cmd`)
 
 ## Example
 

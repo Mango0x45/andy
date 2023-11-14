@@ -60,13 +60,18 @@ type Compound struct {
 type If struct {
 	Cond, Body   CommandList
 	Else         *CommandList
-	Redirs       []Redirect
+	in, out, err *os.File
+}
+
+type While struct {
+	Cond, Body   CommandList
 	in, out, err *os.File
 }
 
 func (_ Simple) isCommand()   {}
 func (_ Compound) isCommand() {}
 func (_ If) isCommand()       {}
+func (_ While) isCommand()    {}
 
 func (c Simple) In() *os.File    { return c.in }
 func (c Simple) Out() *os.File   { return c.out }
@@ -77,6 +82,9 @@ func (c Compound) Err() *os.File { return c.err }
 func (c If) In() *os.File        { return c.in }
 func (c If) Out() *os.File       { return c.out }
 func (c If) Err() *os.File       { return c.err }
+func (c While) In() *os.File     { return c.in }
+func (c While) Out() *os.File    { return c.out }
+func (c While) Err() *os.File    { return c.err }
 
 func (c *Simple) SetIn(f *os.File)    { c.in = f }
 func (c *Simple) SetOut(f *os.File)   { c.out = f }
@@ -87,6 +95,9 @@ func (c *Compound) SetErr(f *os.File) { c.err = f }
 func (c *If) SetIn(f *os.File)        { c.in = f }
 func (c *If) SetOut(f *os.File)       { c.out = f }
 func (c *If) SetErr(f *os.File)       { c.err = f }
+func (c *While) SetIn(f *os.File)     { c.in = f }
+func (c *While) SetOut(f *os.File)    { c.out = f }
+func (c *While) SetErr(f *os.File)    { c.err = f }
 
 // Redirect is a redirection between files and file descriptors
 type Redirect struct {

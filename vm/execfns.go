@@ -89,14 +89,33 @@ func (vm *Vm) execCommand(cmd ast.Command, ctx context) commandResult {
 	}
 
 	switch cmd.(type) {
-	case *ast.If:
-		return vm.execIf(cmd.(*ast.If))
-	case *ast.Compound:
-		return vm.execCompound(cmd.(*ast.Compound))
 	case *ast.Simple:
 		return vm.execSimple(cmd.(*ast.Simple))
+	case *ast.Compound:
+		return vm.execCompound(cmd.(*ast.Compound))
+	case *ast.If:
+		return vm.execIf(cmd.(*ast.If))
+	case *ast.While:
+		return vm.execWhile(cmd.(*ast.While))
 	}
 	panic("unreachable")
+}
+
+func (vm *Vm) execWhile(cmd *ast.While) commandResult {
+	ctx := context{cmd.In(), cmd.Out(), cmd.Err()}
+	for {
+		res := vm.execCmdList(cmd.Cond, ctx)
+		switch ec, ok := res.(errExitCode); {
+		case !ok:
+			return res
+		case ec != 0:
+			return errExitCode(0)
+		}
+
+		if res := vm.execCmdList(cmd.Body, ctx); res.ExitCode() != 0 {
+			return res
+		}
+	}
 }
 
 func (vm *Vm) execIf(cmd *ast.If) commandResult {
