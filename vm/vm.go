@@ -12,13 +12,17 @@ type Vm struct {
 	interactive bool
 }
 
+type context struct {
+	in, out, err *os.File
+}
+
 func New(interactive bool) *Vm {
 	return &Vm{interactive: interactive}
 }
 
 func (vm *Vm) Run(prog ast.Program) {
 	for _, cl := range prog {
-		ret := vm.execCmdList(cl)
+		ret := vm.execCmdList(cl, context{os.Stdin, os.Stdout, os.Stderr})
 		vm.Status = ret.ExitCode()
 		if _, ok := ret.(shellError); ok {
 			fmt.Fprintf(os.Stderr, "andy: %s\n", ret)

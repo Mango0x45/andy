@@ -12,22 +12,22 @@ import (
 
 const appendFlags = os.O_APPEND | os.O_CREATE | os.O_WRONLY
 
-func (vm *Vm) execCmdList(cl ast.CommandList) commandResult {
+func (vm *Vm) execCmdList(cl ast.CommandList, ctx context) commandResult {
 	if cl.Lhs == nil {
-		return vm.execPipeline(cl.Rhs)
+		return vm.execPipeline(cl.Rhs, ctx)
 	}
 
-	res := vm.execCmdList(*cl.Lhs)
+	res := vm.execCmdList(*cl.Lhs, ctx)
 	ec := res.ExitCode()
 
 	if cl.Op == ast.LAnd && ec == 0 || cl.Op == ast.LOr && ec != 0 {
-		return vm.execPipeline(cl.Rhs)
+		return vm.execPipeline(cl.Rhs, ctx)
 	}
 
 	return res
 }
 
-func (vm *Vm) execPipeline(pl ast.Pipeline) commandResult {
+func (vm *Vm) execPipeline(pl ast.Pipeline, ctx context) commandResult {
 	n := len(pl)
 
 	for i := range pl[:n-1] {
@@ -46,7 +46,7 @@ func (vm *Vm) execPipeline(pl ast.Pipeline) commandResult {
 
 	for _, cmd := range pl {
 		go func(cmd ast.Command) {
-			c <- vm.execCommand(cmd)
+			c <- vm.execCommand(cmd, ctx)
 			wg.Done()
 		}(cmd)
 	}
@@ -63,45 +63,60 @@ func (vm *Vm) execPipeline(pl ast.Pipeline) commandResult {
 	return errExitCode(0)
 }
 
-func (vm *Vm) execCommand(cmd ast.Command) commandResult {
-	if cmd.GetIn() != os.Stdin {
-		defer cmd.GetIn().Close()
+func (vm *Vm) execCommand(cmd ast.Command, ctx context) commandResult {
+	switch cmd.In() {
+	case nil:
+		cmd.SetIn(ctx.in)
+	case ctx.in:
+	default:
+		defer cmd.In().Close()
 	}
-	if cmd.GetOut() != os.Stdout {
-		defer cmd.GetOut().Close()
+
+	switch cmd.Out() {
+	case nil:
+		cmd.SetOut(ctx.out)
+	case ctx.out:
+	default:
+		defer cmd.Out().Close()
 	}
-	if cmd.GetErr() != os.Stderr {
-		defer cmd.GetErr().Close()
+
+	switch cmd.Err() {
+	case nil:
+		cmd.SetErr(ctx.err)
+	case ctx.err:
+	default:
+		defer cmd.Err().Close()
 	}
 
 	switch cmd.(type) {
 	case *ast.If:
-		return vm.execIf(cmd.(*ast.If))
+		return vm.execIf(cmd.(*ast.If), ctx)
 	case *ast.Simple:
-		return vm.execSimple(cmd.(*ast.Simple))
+		return vm.execSimple(cmd.(*ast.Simple), ctx)
 	}
 	panic("unreachable")
 }
 
-func (vm *Vm) execIf(cmd *ast.If) commandResult {
-	res := vm.execCmdList(cmd.Cond)
+func (vm *Vm) execIf(cmd *ast.If, _ context) commandResult {
+	ctx := context{cmd.In(), cmd.Out(), cmd.Err()}
+	res := vm.execCmdList(cmd.Cond, ctx)
 	switch ec, ok := res.(errExitCode); {
 	case !ok:
 		return res
 	case ec == 0:
-		return vm.execCmdList(cmd.Body)
+		return vm.execCmdList(cmd.Body, ctx)
 	}
 	return errExitCode(0)
 }
 
-func (vm *Vm) execSimple(cmd *ast.Simple) commandResult {
+func (vm *Vm) execSimple(cmd *ast.Simple, _ context) commandResult {
 	args := make([]string, 0, cap(cmd.Args))
 	for _, v := range cmd.Args {
 		args = append(args, v.ToStrings()...)
 	}
 
 	c := exec.Command(args[0], args[1:]...)
-	c.Stdin, c.Stdout, c.Stderr = cmd.In, cmd.Out, cmd.Err
+	c.Stdin, c.Stdout, c.Stderr = cmd.In(), cmd.Out(), cmd.Err()
 
 	for _, r := range cmd.Redirs {
 		var name string

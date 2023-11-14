@@ -33,9 +33,11 @@ type Pipeline []Command
 // Command is a command the shell can execute
 type Command interface {
 	isCommand()
-	GetIn() *os.File
-	GetOut() *os.File
-	GetErr() *os.File
+
+	In() *os.File
+	Out() *os.File
+	Err() *os.File
+
 	SetIn(*os.File)
 	SetOut(*os.File)
 	SetErr(*os.File)
@@ -45,31 +47,32 @@ type Command interface {
 type Simple struct {
 	Args         []Value
 	Redirs       []Redirect
-	In, Out, Err *os.File
+	in, out, err *os.File
 }
 
+// If is a conditional branch; it executes Body if Cond was successful
 type If struct {
 	Cond, Body   CommandList
 	Redirs       []Redirect
-	In, Out, Err *os.File
+	in, out, err *os.File
 }
-
-func (c *Simple) GetIn() *os.File  { return c.In }
-func (c *Simple) GetOut() *os.File { return c.Out }
-func (c *Simple) GetErr() *os.File { return c.Err }
-func (c *If) GetIn() *os.File      { return c.In }
-func (c *If) GetOut() *os.File     { return c.Out }
-func (c *If) GetErr() *os.File     { return c.Err }
-
-func (c *Simple) SetIn(f *os.File)  { c.In = f }
-func (c *Simple) SetOut(f *os.File) { c.Out = f }
-func (c *Simple) SetErr(f *os.File) { c.Err = f }
-func (c *If) SetIn(f *os.File)      { c.In = f }
-func (c *If) SetOut(f *os.File)     { c.Out = f }
-func (c *If) SetErr(f *os.File)     { c.Err = f }
 
 func (_ Simple) isCommand() {}
 func (_ If) isCommand()     {}
+
+func (c Simple) In() *os.File  { return c.in }
+func (c Simple) Out() *os.File { return c.out }
+func (c Simple) Err() *os.File { return c.err }
+func (c If) In() *os.File      { return c.in }
+func (c If) Out() *os.File     { return c.out }
+func (c If) Err() *os.File     { return c.err }
+
+func (c *Simple) SetIn(f *os.File)  { c.in = f }
+func (c *Simple) SetOut(f *os.File) { c.out = f }
+func (c *Simple) SetErr(f *os.File) { c.err = f }
+func (c *If) SetIn(f *os.File)      { c.in = f }
+func (c *If) SetOut(f *os.File)     { c.out = f }
+func (c *If) SetErr(f *os.File)     { c.err = f }
 
 // Redirect is a redirection between files and file descriptors
 type Redirect struct {

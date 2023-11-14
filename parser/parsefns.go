@@ -124,9 +124,6 @@ func (p *Parser) parseSimple() *ast.Simple {
 			return &ast.Simple{
 				Args:   args,
 				Redirs: redirs,
-				In:     os.Stdin,
-				Out:    os.Stdout,
-				Err:    os.Stderr,
 			}
 		}
 	}
