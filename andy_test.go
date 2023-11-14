@@ -14,8 +14,8 @@ func init() {
 	os.Chdir("./testdata")
 }
 
-func runAndCapture(t *testing.T, argv []string, wantOut, wantErr string) {
-	c := exec.Command("../andy", argv...)
+func runAndCapture(t *testing.T, name string, wantOut, wantErr string) {
+	c := exec.Command("../andy", name+".an")
 	var out, err bytes.Buffer
 	c.Stdout = &out
 	c.Stderr = &err
@@ -35,11 +35,11 @@ func TestSimple(t *testing.T) {
 	s := "hello world\n" +
 		"this is a simple builtin-command\n" +
 		"this is a simple external process\n"
-	runAndCapture(t, []string{"simple.an"}, s, "")
+	runAndCapture(t, "simple", s, "")
 }
 
 func TestRedirects(t *testing.T) {
-	runAndCapture(t, []string{"redirects.an"}, "oof\n", "")
+	runAndCapture(t, "redirects", "oof\n", "")
 
 	foo, _ := os.ReadFile("foo")
 	bar, _ := os.ReadFile("bar")
@@ -58,7 +58,7 @@ func TestRedirects(t *testing.T) {
 func TestPipes(t *testing.T) {
 	s := "rab oof\n" +
 		"wOrld\n"
-	runAndCapture(t, []string{"pipes.an"}, s, "")
+	runAndCapture(t, "pipes", s, "")
 }
 
 func TestLogical(t *testing.T) {
@@ -71,7 +71,7 @@ func TestLogical(t *testing.T) {
 		"chain failed3\n" +
 		"bar4\n" +
 		"chain failed4\n"
-	runAndCapture(t, []string{"logical.an"}, s, "")
+	runAndCapture(t, "logical", s, "")
 }
 
 func TestConcat(t *testing.T) {
@@ -80,5 +80,5 @@ func TestConcat(t *testing.T) {
 		"a.c b.c c.c\n" +
 		"a-c a-b a-a b-c b-b b-a c-c c-b c-a\n" +
 		"a b c c b a\n"
-	runAndCapture(t, []string{"concat.an"}, s, "")
+	runAndCapture(t, "concat", s, "")
 }
