@@ -82,3 +82,15 @@ func TestConcat(t *testing.T) {
 		"a b c c b a\n"
 	runAndCapture(t, "concat", s, "")
 }
+
+func TestStrings(t *testing.T) {
+	s := "foo\tbar\tbaz\n" +
+		"hello\nworld\n" +
+		"foo\\tbar\\tbaz\n" +
+		"you shouldn't have done that\n" +
+		"\n" +
+		"foo\nbar baz\ntext\twith\ttabs\n" +
+		"foo bar\n" +
+		"foo\tbar\n"
+	runAndCapture(t, "strings", s, "")
+}

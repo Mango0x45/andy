@@ -90,15 +90,25 @@ func lexPipe(l *lexer) lexFn {
 }
 
 func lexArg(l *lexer) lexFn {
-	l.start = l.pos
-	l.pos += strings.IndexFunc(l.input[l.pos:], func(r rune) bool {
-		return unicode.IsSpace(r) || isMetachar(r) || isEol(r)
-	})
-	if l.pos < l.start { // EOF reached
-		l.pos = len(l.input)
+	sb := strings.Builder{}
+	for {
+		switch r := l.next(); {
+		case r == '\\':
+			if r := l.next(); unicode.IsSpace(r) || isMetachar(r) {
+				sb.WriteRune(r)
+			} else if r, ok := backslashEsc[r]; ok {
+				sb.WriteRune(r)
+			} else {
+				return l.errorf("invalid escape sequence ‘\\%c’", r)
+			}
+		case unicode.IsSpace(r) || isMetachar(r) || isEol(r) || r == eof:
+			l.backup()
+			l.Out <- Token{TokArg, sb.String()}
+			return lexMaybeConcat
+		default:
+			sb.WriteRune(r)
+		}
 	}
-	l.emit(TokArg)
-	return lexMaybeConcat
 }
 
 func lexStringSingle(l *lexer) lexFn {
