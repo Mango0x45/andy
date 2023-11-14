@@ -1,0 +1,7 @@
+echo foo 'bar' "baz"
+echo foo'bar'"baz"
+
+echo (a b c).c
+echo (a b c)-(c b a)
+
+echo (a b c) (c b a)

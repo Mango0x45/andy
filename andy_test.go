@@ -73,3 +73,12 @@ func TestLogical(t *testing.T) {
 		"chain failed4\n"
 	runAndCapture(t, []string{"logical.an"}, s, "")
 }
+
+func TestConcat(t *testing.T) {
+	s := "foo bar baz\n" +
+		"foobarbaz\n" +
+		"a.c b.c c.c\n" +
+		"a-c a-b a-a b-c b-b b-a c-c c-b c-a\n" +
+		"a b c c b a\n"
+	runAndCapture(t, []string{"concat.an"}, s, "")
+}
