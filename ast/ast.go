@@ -53,6 +53,7 @@ type Simple struct {
 // If is a conditional branch; it executes Body if Cond was successful
 type If struct {
 	Cond, Body   CommandList
+	Else         *CommandList
 	Redirs       []Redirect
 	in, out, err *os.File
 }

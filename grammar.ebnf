@@ -4,8 +4,8 @@
 program = cmdlist;
 cmdlist = pipeline, {lop, pipeline}, end;
 pipeline = cmd, {'|', cmd};
-cmd = simple
-    | 'if', cmdlist, cmdlist;
+cmd = simple | if;
+if = 'if', cmdlist, cmdlist, ['else', cmdlist];
 simple = value, {value}, {redir};
 
 redir =

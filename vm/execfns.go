@@ -105,6 +105,8 @@ func (vm *Vm) execIf(cmd *ast.If, _ context) commandResult {
 		return res
 	case ec == 0:
 		return vm.execCmdList(cmd.Body, ctx)
+	case cmd.Else != nil:
+		return vm.execCmdList(*cmd.Else, ctx)
 	}
 	return errExitCode(0)
 }

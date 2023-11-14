@@ -89,10 +89,18 @@ func (p *Parser) parseCommand() ast.Command {
 }
 
 func (p *Parser) parseIf() *ast.If {
-	return &ast.If{
+	if_ := ast.If{
 		Cond: p.parseCommandList(),
 		Body: p.parseCommandList(),
 	}
+
+	if t := p.peek(); t.Kind == lexer.TokArg && t.Val == "else" {
+		p.next()
+		cl := p.parseCommandList()
+		if_.Else = &cl
+	}
+
+	return &if_
 }
 
 func (p *Parser) parseSimple() *ast.Simple {
