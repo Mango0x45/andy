@@ -90,14 +90,16 @@ func (vm *Vm) execCommand(cmd ast.Command, ctx context) commandResult {
 
 	switch cmd.(type) {
 	case *ast.If:
-		return vm.execIf(cmd.(*ast.If), ctx)
+		return vm.execIf(cmd.(*ast.If))
+	case *ast.Compound:
+		return vm.execCompound(cmd.(*ast.Compound))
 	case *ast.Simple:
-		return vm.execSimple(cmd.(*ast.Simple), ctx)
+		return vm.execSimple(cmd.(*ast.Simple))
 	}
 	panic("unreachable")
 }
 
-func (vm *Vm) execIf(cmd *ast.If, _ context) commandResult {
+func (vm *Vm) execIf(cmd *ast.If) commandResult {
 	ctx := context{cmd.In(), cmd.Out(), cmd.Err()}
 	res := vm.execCmdList(cmd.Cond, ctx)
 	switch ec, ok := res.(errExitCode); {
@@ -111,7 +113,17 @@ func (vm *Vm) execIf(cmd *ast.If, _ context) commandResult {
 	return errExitCode(0)
 }
 
-func (vm *Vm) execSimple(cmd *ast.Simple, _ context) commandResult {
+func (vm *Vm) execCompound(cmd *ast.Compound) commandResult {
+	ctx := context{cmd.In(), cmd.Out(), cmd.Err()}
+	for _, cl := range cmd.Cmds {
+		if res := vm.execCmdList(cl, ctx); res.ExitCode() != 0 {
+			return res
+		}
+	}
+	return errExitCode(0)
+}
+
+func (vm *Vm) execSimple(cmd *ast.Simple) commandResult {
 	args := make([]string, 0, cap(cmd.Args))
 	for _, v := range cmd.Args {
 		args = append(args, v.ToStrings()...)

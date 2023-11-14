@@ -41,6 +41,10 @@ func lexDefault(l *lexer) lexFn {
 			l.emit(TokRead)
 		case r == '>':
 			return lexWrite
+		case r == '{':
+			l.emit(TokBOpen)
+		case r == '}':
+			l.emit(TokBClose)
 		case r == '(':
 			l.emit(TokPOpen)
 		case r == ')':

@@ -26,6 +26,8 @@ const (
 	TokLAnd // The ‘&&’ operator
 	TokLOr  // The ‘||’ operator
 
+	TokBOpen  // The opening brace of a compound command
+	TokBClose // The opening brace of a compound command
 	TokPOpen  // The opening parenthesis of a list
 	TokPClose // The closing parenthesis of a list
 )
@@ -74,6 +76,10 @@ func (t Token) String() string {
 	case TokLOr:
 		return "‘||’"
 
+	case TokBOpen:
+		return "‘{’"
+	case TokBClose:
+		return "‘}’"
 	case TokPOpen:
 		return "‘(’"
 	case TokPClose:

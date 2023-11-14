@@ -29,6 +29,8 @@ a while.  The currently implemented features are:
 - [X] Value lists (`(a b …)`)
 - [X] String concationation (`foo'bar'"baz"`)
 - [X] Cartesian product list concationation (`(foo bar).c; (a b)(c d)`)
+- [X] Compound commands (`{ cmd; cmd }`)
+- [X] If(-else) expressions (`if cmd; cmd; else cmd`)
 
 ## Example
 

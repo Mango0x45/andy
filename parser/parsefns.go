@@ -81,9 +81,13 @@ func (p *Parser) parsePipeline() ast.Pipeline {
 }
 
 func (p *Parser) parseCommand() ast.Command {
-	if t := p.peek(); t.Kind == lexer.TokArg && t.Val == "if" {
+	switch t := p.peek(); {
+	case t.Kind == lexer.TokArg && t.Val == "if":
 		p.next()
 		return p.parseIf()
+	case t.Kind == lexer.TokBOpen:
+		p.next()
+		return p.parseCompound()
 	}
 	return p.parseSimple()
 }
@@ -101,6 +105,24 @@ func (p *Parser) parseIf() *ast.If {
 	}
 
 	return &if_
+}
+
+func (p *Parser) parseCompound() *ast.Compound {
+	cmds := make([]ast.CommandList, 0, 4) // Add a little capacity
+
+	for {
+		switch p.peek().Kind {
+		case lexer.TokBClose:
+			p.next()
+			return &ast.Compound{Cmds: cmds}
+		case lexer.TokEndStmt:
+			p.next()
+		case lexer.TokEof:
+			die(errExpected{"closing brace", p.peek()})
+		default:
+			cmds = append(cmds, p.parseCommandList())
+		}
+	}
 }
 
 func (p *Parser) parseSimple() *ast.Simple {

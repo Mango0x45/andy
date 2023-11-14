@@ -1,11 +1,12 @@
 (* Anything between ‘??’ represents a regex.  Regex character classes are
    unicode aware (‘\s’ matches all unicode spaces) *)
 
-program = cmdlist;
+program = cmdlist, {cmdlist};
 cmdlist = pipeline, {lop, pipeline}, end;
 pipeline = cmd, {'|', cmd};
-cmd = simple | if;
+cmd = simple | compound | if;
 if = 'if', cmdlist, cmdlist, ['else', cmdlist];
+compound = '{', cmdlist, {cmdlist}, '}';
 simple = value, {value}, {redir};
 
 redir =
