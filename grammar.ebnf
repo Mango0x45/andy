@@ -3,7 +3,9 @@
 
 program = cmdlist;
 cmdlist = pipeline, {lop, pipeline}, end;
-pipeline = simple, {'|', simple};
+pipeline = cmd, {'|', cmd};
+cmd = simple
+    | 'if', cmdlist, cmdlist;
 simple = value, {value}, {redir};
 
 redir =

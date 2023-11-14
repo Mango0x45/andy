@@ -28,7 +28,18 @@ type CommandList struct {
 }
 
 // Pipeline is a list of commands connected by pipes
-type Pipeline []Simple
+type Pipeline []Command
+
+// Command is a command the shell can execute
+type Command interface {
+	isCommand()
+	GetIn() *os.File
+	GetOut() *os.File
+	GetErr() *os.File
+	SetIn(*os.File)
+	SetOut(*os.File)
+	SetErr(*os.File)
+}
 
 // Simple is the simplest form of a command, just arguments and redirects
 type Simple struct {
@@ -36,6 +47,29 @@ type Simple struct {
 	Redirs       []Redirect
 	In, Out, Err *os.File
 }
+
+type If struct {
+	Cond, Body   CommandList
+	Redirs       []Redirect
+	In, Out, Err *os.File
+}
+
+func (c *Simple) GetIn() *os.File  { return c.In }
+func (c *Simple) GetOut() *os.File { return c.Out }
+func (c *Simple) GetErr() *os.File { return c.Err }
+func (c *If) GetIn() *os.File      { return c.In }
+func (c *If) GetOut() *os.File     { return c.Out }
+func (c *If) GetErr() *os.File     { return c.Err }
+
+func (c *Simple) SetIn(f *os.File)  { c.In = f }
+func (c *Simple) SetOut(f *os.File) { c.Out = f }
+func (c *Simple) SetErr(f *os.File) { c.Err = f }
+func (c *If) SetIn(f *os.File)      { c.In = f }
+func (c *If) SetOut(f *os.File)     { c.Out = f }
+func (c *If) SetErr(f *os.File)     { c.Err = f }
+
+func (_ Simple) isCommand() {}
+func (_ If) isCommand()     {}
 
 // Redirect is a redirection between files and file descriptors
 type Redirect struct {

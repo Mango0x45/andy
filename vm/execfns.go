@@ -36,8 +36,8 @@ func (vm *Vm) execPipeline(pl ast.Pipeline) commandResult {
 			return errInternal{err}
 		}
 
-		pl[i+0].Out = w
-		pl[i+1].In = r
+		pl[i+0].SetOut(w)
+		pl[i+1].SetIn(r)
 	}
 
 	c := make(chan commandResult, n)
@@ -45,8 +45,8 @@ func (vm *Vm) execPipeline(pl ast.Pipeline) commandResult {
 	wg.Add(n)
 
 	for _, cmd := range pl {
-		go func(cmd ast.Simple) {
-			c <- vm.execSimple(cmd)
+		go func(cmd ast.Command) {
+			c <- vm.execCommand(cmd)
 			wg.Done()
 		}(cmd)
 	}
@@ -63,17 +63,38 @@ func (vm *Vm) execPipeline(pl ast.Pipeline) commandResult {
 	return errExitCode(0)
 }
 
-func (vm *Vm) execSimple(cmd ast.Simple) commandResult {
-	if cmd.In != os.Stdin {
-		defer cmd.In.Close()
+func (vm *Vm) execCommand(cmd ast.Command) commandResult {
+	if cmd.GetIn() != os.Stdin {
+		defer cmd.GetIn().Close()
 	}
-	if cmd.Out != os.Stdout {
-		defer cmd.Out.Close()
+	if cmd.GetOut() != os.Stdout {
+		defer cmd.GetOut().Close()
 	}
-	if cmd.Err != os.Stderr {
-		defer cmd.Err.Close()
+	if cmd.GetErr() != os.Stderr {
+		defer cmd.GetErr().Close()
 	}
 
+	switch cmd.(type) {
+	case *ast.If:
+		return vm.execIf(cmd.(*ast.If))
+	case *ast.Simple:
+		return vm.execSimple(cmd.(*ast.Simple))
+	}
+	panic("unreachable")
+}
+
+func (vm *Vm) execIf(cmd *ast.If) commandResult {
+	res := vm.execCmdList(cmd.Cond)
+	switch ec, ok := res.(errExitCode); {
+	case !ok:
+		return res
+	case ec == 0:
+		return vm.execCmdList(cmd.Body)
+	}
+	return errExitCode(0)
+}
+
+func (vm *Vm) execSimple(cmd *ast.Simple) commandResult {
 	args := make([]string, 0, cap(cmd.Args))
 	for _, v := range cmd.Args {
 		args = append(args, v.ToStrings()...)

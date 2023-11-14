@@ -65,13 +65,13 @@ func (p *Parser) parseXCommandList() ast.XCommandList {
 }
 
 func (p *Parser) parsePipeline() ast.Pipeline {
-	pipe := ast.Pipeline{p.parseSimple()}
+	pipe := ast.Pipeline{p.parseCommand()}
 
 	for {
 		switch p.peek().Kind {
 		case lexer.TokPipe:
 			p.next()
-			pipe = append(pipe, p.parseSimple())
+			pipe = append(pipe, p.parseCommand())
 		case lexer.TokEndStmt:
 			p.next()
 		default:
@@ -80,7 +80,22 @@ func (p *Parser) parsePipeline() ast.Pipeline {
 	}
 }
 
-func (p *Parser) parseSimple() ast.Simple {
+func (p *Parser) parseCommand() ast.Command {
+	if t := p.peek(); t.Kind == lexer.TokArg && t.Val == "if" {
+		p.next()
+		return p.parseIf()
+	}
+	return p.parseSimple()
+}
+
+func (p *Parser) parseIf() *ast.If {
+	return &ast.If{
+		Cond: p.parseCommandList(),
+		Body: p.parseCommandList(),
+	}
+}
+
+func (p *Parser) parseSimple() *ast.Simple {
 	args := make([]ast.Value, 0, 4) // Add a little capacity
 	var redirs []ast.Redirect
 
@@ -106,7 +121,7 @@ func (p *Parser) parseSimple() ast.Simple {
 		case ast.IsValue(t.Kind):
 			die(errExpected{"semicolon or newline", t})
 		default:
-			return ast.Simple{
+			return &ast.Simple{
 				Args:   args,
 				Redirs: redirs,
 				In:     os.Stdin,
