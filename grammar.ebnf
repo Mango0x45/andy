@@ -1,7 +1,7 @@
 (* Anything between ‘??’ represents a regex.  Regex character classes are
    unicode aware (‘\s’ matches all unicode spaces) *)
 
-program = cmdlist, {cmdlist};
+program = {cmdlist};
 cmdlist = pipeline, {lop, pipeline}, end;
 pipeline = cmd, {'|', cmd};
 cmd = simple | compound | if | while;
