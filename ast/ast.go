@@ -161,14 +161,15 @@ func (a Argument) tildeExpand() string {
 		i = len(s)
 	}
 
-	var u *user.User
-	var err error
 	if i == 1 {
-		u, err = user.Current()
-	} else {
-		u, err = user.Lookup(s[1:i])
+		home, err := os.UserHomeDir()
+		if err != nil {
+			return s
+		}
+		return home + s[i:]
 	}
 
+	u, err := user.Lookup(s[1:i])
 	if err != nil {
 		return s
 	}
