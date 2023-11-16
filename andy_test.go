@@ -94,3 +94,14 @@ func TestStrings(t *testing.T) {
 		"foo\tbar\n"
 	runAndCapture(t, "strings", s, "")
 }
+
+func TestTilde(t *testing.T) {
+	dir, _ := os.UserHomeDir()
+	s := dir + "/foo/bar\n" +
+		dir + "\n" +
+		"/root\n" +
+		"~ \n" +
+		"~\n" +
+		" ~\n"
+	runAndCapture(t, "tilde", s, "")
+}
