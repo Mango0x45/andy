@@ -148,10 +148,10 @@ func NewValue(t lexer.Token) Value {
 type Argument string
 
 func (a Argument) ToStrings() []string {
-	return []string{a.TildeExpand()}
+	return []string{a.tildeExpand()}
 }
 
-func (a Argument) TildeExpand() string {
+func (a Argument) tildeExpand() string {
 	s := string(a)
 	if len(s) == 0 || s[0] != '~' {
 		return s
