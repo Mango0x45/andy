@@ -2,6 +2,8 @@ package ast
 
 import (
 	"os"
+	"os/user"
+	"strings"
 
 	"git.sr.ht/~mango/andy/lexer"
 )
@@ -146,7 +148,31 @@ func NewValue(t lexer.Token) Value {
 type Argument string
 
 func (a Argument) ToStrings() []string {
-	return []string{string(a)}
+	return []string{a.TildeExpand()}
+}
+
+func (a Argument) TildeExpand() string {
+	s := string(a)
+	if len(s) == 0 || s[0] != '~' {
+		return s
+	}
+	i := strings.IndexByte(s, '/')
+	if i == -1 {
+		i = len(s)
+	}
+
+	var u *user.User
+	var err error
+	if i == 1 {
+		u, err = user.Current()
+	} else {
+		u, err = user.Lookup(s[1:i])
+	}
+
+	if err != nil {
+		return s
+	}
+	return u.HomeDir + s[i:]
 }
 
 type String string

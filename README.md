@@ -32,6 +32,7 @@ a while.  The currently implemented features are:
 - [X] Compound commands (`{ cmd; cmd }`)
 - [X] If(-else) expressions (`if cmd; cmd; else cmd`)
 - [X] While expressions (`while cmd; cmd`)
+- [X] Tilde expansion (`echo ~ ~username`)
 
 ## Example
 
