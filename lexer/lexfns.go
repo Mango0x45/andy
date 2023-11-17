@@ -116,7 +116,7 @@ func lexVarRef(l *lexer) lexFn {
 	l.start = l.pos
 
 	l.pos += strings.IndexFunc(l.input[l.pos:], func(r rune) bool {
-		return !isRefChar(r)
+		return !IsRefChar(r)
 	})
 	if l.pos < l.start {
 		l.pos = len(l.input)

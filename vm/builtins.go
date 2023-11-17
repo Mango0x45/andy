@@ -6,6 +6,7 @@ import (
 	"os/exec"
 	"os/user"
 
+	"git.sr.ht/~mango/andy/lexer"
 	"git.sr.ht/~mango/andy/vm/vars"
 )
 
@@ -92,6 +93,13 @@ func builtinSet(cmd *exec.Cmd) commandResult {
 	}
 
 	ident := cmd.Args[1]
+	for _, r := range ident {
+		if !lexer.IsRefChar(r) {
+			errorf(cmd, "rune ‘%c’ is not allowed in variable names", r)
+			return errExitCode(1)
+		}
+	}
+
 	if argc == 2 {
 		_, ok := vars.VarTable[ident]
 		if !ok {
@@ -112,4 +120,8 @@ func builtinTrue(cmd *exec.Cmd) commandResult {
 		fmt.Fprintf(cmd.Stderr, "andy: %d arguments to ‘true’ are being ignored\n", n)
 	}
 	return errExitCode(0)
+}
+
+func errorf(cmd *exec.Cmd, format string, args ...any) {
+	fmt.Fprintf(cmd.Stderr, "andy: "+format+"\n", args...)
 }

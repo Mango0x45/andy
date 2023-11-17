@@ -20,7 +20,7 @@ func isEol(r rune) bool {
 	return r == ';' || r == '\n'
 }
 
-func isRefChar(r rune) bool {
+func IsRefChar(r rune) bool {
 	return unicode.IsLetter(r) ||
 		r == '_' ||
 		r == 'ʹ' ||
