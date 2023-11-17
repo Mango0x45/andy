@@ -94,14 +94,14 @@ func lexArg(l *lexer) lexFn {
 	for {
 		switch r := l.next(); {
 		case r == '\\':
-			if r := l.next(); unicode.IsSpace(r) || isMetachar(r) {
+			if r := l.next(); unicode.IsSpace(r) || isMetaChar(r) {
 				sb.WriteRune(r)
 			} else if r, ok := backslashEsc[r]; ok {
 				sb.WriteRune(r)
 			} else {
 				return l.errorf("invalid escape sequence ‘\\%c’", r)
 			}
-		case unicode.IsSpace(r) || isMetachar(r) || isEol(r) || r == eof:
+		case unicode.IsSpace(r) || isMetaChar(r) || isEol(r) || r == eof:
 			l.backup()
 			l.Out <- Token{TokArg, sb.String()}
 			return lexMaybeConcat
@@ -109,6 +109,21 @@ func lexArg(l *lexer) lexFn {
 			sb.WriteRune(r)
 		}
 	}
+}
+
+func lexVarRef(l *lexer) lexFn {
+	l.next() // Consume ‘$’
+	l.start = l.pos
+
+	l.pos += strings.IndexFunc(l.input[l.pos:], func(r rune) bool {
+		return !isRefChar(r)
+	})
+	if l.pos < l.start {
+		l.pos = len(l.input)
+	}
+
+	l.emit(TokVarRef)
+	return lexMaybeConcat
 }
 
 func lexStringSingle(l *lexer) lexFn {
@@ -160,7 +175,10 @@ func lexMaybeConcat(l *lexer) lexFn {
 	case r == '(':
 		l.emit(TokConcat)
 		return lexDefault
-	case unicode.IsSpace(r) || isMetachar(r) || isEol(r) || r == eof:
+	case r == '$':
+		l.emit(TokConcat)
+		return lexVarRef
+	case unicode.IsSpace(r) || isMetaChar(r) || isEol(r) || r == eof:
 		return lexDefault
 	}
 	l.emit(TokConcat)

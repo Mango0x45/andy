@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	"git.sr.ht/~mango/andy/lexer"
+	"git.sr.ht/~mango/andy/vm/vars"
 )
 
 // See grammar.ebnf in the project root for details
@@ -141,6 +142,8 @@ func NewValue(t lexer.Token) Value {
 		return Argument(t.Val)
 	case lexer.TokString:
 		return String(t.Val)
+	case lexer.TokVarRef:
+		return VarRef(t.Val)
 	}
 	panic("unreachable")
 }
@@ -180,6 +183,13 @@ type String string
 
 func (s String) ToStrings() []string {
 	return []string{string(s)}
+}
+
+type VarRef string
+
+func (vr VarRef) ToStrings() []string {
+	xs, _ := vars.VarTable[string(vr)]
+	return xs
 }
 
 type Concat struct {

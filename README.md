@@ -33,6 +33,7 @@ a while.  The currently implemented features are:
 - [X] If(-else) expressions (`if cmd; cmd; else cmd`)
 - [X] While expressions (`while cmd; cmd`)
 - [X] Tilde expansion (`echo ~ ~username`)
+- [X] Setting- and reading variables (`set x foo; set xʹ $x.c; echo $xʹ`)
 
 ## Example
 

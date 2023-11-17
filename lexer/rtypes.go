@@ -1,6 +1,8 @@
 package lexer
 
-func isMetachar(r rune) bool {
+import "unicode"
+
+func isMetaChar(r rune) bool {
 	return r == '\'' ||
 		r == '"' ||
 		r == '|' ||
@@ -10,9 +12,19 @@ func isMetachar(r rune) bool {
 		r == '{' ||
 		r == '}' ||
 		r == '(' ||
-		r == ')'
+		r == ')' ||
+		r == '$'
 }
 
 func isEol(r rune) bool {
 	return r == ';' || r == '\n'
+}
+
+func isRefChar(r rune) bool {
+	return unicode.IsLetter(r) ||
+		r == '_' ||
+		r == 'ʹ' ||
+		r == 'ʺ' ||
+		r == '‴' ||
+		r == '⁗'
 }

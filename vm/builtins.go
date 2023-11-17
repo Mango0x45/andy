@@ -5,6 +5,8 @@ import (
 	"os"
 	"os/exec"
 	"os/user"
+
+	"git.sr.ht/~mango/andy/vm/vars"
 )
 
 type builtin func(cmd *exec.Cmd) commandResult
@@ -13,6 +15,7 @@ var builtins = map[string]builtin{
 	"cd":    builtinCd,
 	"echo":  builtinEcho,
 	"false": builtinFalse,
+	"set":   builtinSet,
 	"true":  builtinTrue,
 }
 
@@ -79,6 +82,28 @@ func builtinFalse(cmd *exec.Cmd) commandResult {
 		fmt.Fprintf(cmd.Stderr, "andy: %d arguments to ‘false’ are being ignored\n", n)
 	}
 	return errExitCode(1)
+}
+
+func builtinSet(cmd *exec.Cmd) commandResult {
+	argc := len(cmd.Args)
+	if argc == 1 {
+		fmt.Fprintf(cmd.Stderr, "Usage: set variable [value ...]\n")
+		return errExitCode(1)
+	}
+
+	ident := cmd.Args[1]
+	if argc == 2 {
+		_, ok := vars.VarTable[ident]
+		if !ok {
+			fmt.Fprintf(cmd.Stderr, "andy: variable ‘$%s’ was already unset\n", ident)
+			return errExitCode(1)
+		}
+		delete(vars.VarTable, ident)
+	} else {
+		vars.VarTable[ident] = cmd.Args[2:]
+	}
+
+	return errExitCode(0)
 }
 
 func builtinTrue(cmd *exec.Cmd) commandResult {

@@ -14,6 +14,7 @@ const (
 
 	TokArg    // An unquoted string
 	TokConcat // Concatination between two values
+	TokVarRef // A variable reference
 	TokString // A quoted string
 
 	TokAppend  // The ‘>>’ operator
@@ -58,6 +59,8 @@ func (t Token) String() string {
 		return "‘" + t.Val + "’"
 	case TokConcat:
 		return "value concatination"
+	case TokVarRef:
+		return fmt.Sprintf("‘$%s’", t.Val)
 
 	case TokAppend:
 		return "‘>>’"
