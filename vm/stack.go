@@ -12,12 +12,13 @@ func (s *stack[T]) push(x T) {
 	s.xs = append(s.xs, x)
 }
 
-func (s *stack[T]) pop() *T {
+func (s *stack[T]) pop() (T, bool) {
+	var x T
 	if len(s.xs) == 0 {
-		return nil
+		return x, false
 	}
 	n := len(s.xs) - 1
-	x := s.xs[n]
+	x = s.xs[n]
 	s.xs = s.xs[:n]
-	return &x
+	return x, true
 }

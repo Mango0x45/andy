@@ -23,44 +23,50 @@ var builtins = map[string]builtin{
 var cdStack *stack[string] = newStack[string](64)
 
 func builtinCd(cmd *exec.Cmd) commandResult {
-	var dst string
 	switch len(cmd.Args) {
 	case 1:
-		if cwd, err := os.Getwd(); err != nil {
-			errorf(cmd, "%s", err)
-		} else {
-			cdStack.push(cwd)
-		}
-
 		user, err := user.Current()
 		if err != nil {
-			return errInternal{err}
+			errorf(cmd, "%s", err)
+			return errExitCode(1)
 		}
-		dst = user.HomeDir
+		return cd(cmd, user.HomeDir)
 	case 2:
-		dst = cmd.Args[1]
+		dst := cmd.Args[1]
 		if dst == "-" {
-			maybe := cdStack.pop()
-			if maybe == nil {
-				errorf(cmd, "the directory stack is empty")
-				return errExitCode(1)
-			}
-			dst = *maybe
-		} else {
-			cwd, err := os.Getwd()
-			if err != nil {
-				errorf(cmd, "%s", err)
-				return errExitCode(1)
-			}
-			cdStack.push(cwd)
+			return cdPop(cmd)
 		}
-	default:
-		fmt.Fprintln(cmd.Stderr, "Usage: cd [directory]")
+		return cd(cmd, dst)
+	}
+	fmt.Fprintln(cmd.Stderr, "Usage: cd [directory]")
+	return errExitCode(1)
+}
+
+func cd(cmd *exec.Cmd, dst string) commandResult {
+	if cwd, err := os.Getwd(); err != nil {
+		errorf(cmd, "%s", err)
+	} else {
+		cdStack.push(cwd)
+	}
+
+	if err := os.Chdir(dst); err != nil {
+		cdStack.pop()
+		errorf(cmd, "%s", err)
+		return errExitCode(1)
+	}
+	return errExitCode(0)
+}
+
+func cdPop(cmd *exec.Cmd) commandResult {
+	dst, ok := cdStack.pop()
+	if !ok {
+		errorf(cmd, "the directory stack is empty")
 		return errExitCode(1)
 	}
 
 	if err := os.Chdir(dst); err != nil {
-		return errInternal{err}
+		errorf(cmd, "%s", err)
+		return errExitCode(1)
 	}
 	return errExitCode(0)
 }
