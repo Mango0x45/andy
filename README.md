@@ -22,7 +22,7 @@ a while.  The currently implemented features are:
 - [X] Write to /dev/null (`>_`)
 - [X] Pipelines (`cmd1 | … | cmdN`)
 - [X] Condition chains (`cmd1 && … || cmdN`)
-- [X] `cd` builtin function
+- [X] `cd` builtin function with `pushd/popd` behaviour
 - [X] `echo` builtin function
 - [X] `true` builtin function
 - [X] `false` builtin function
