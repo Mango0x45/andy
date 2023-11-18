@@ -26,12 +26,11 @@ func builtinCd(cmd *exec.Cmd) commandResult {
 	var dst string
 	switch len(cmd.Args) {
 	case 1:
-		cwd, err := os.Getwd()
-		if err != nil {
+		if cwd, err := os.Getwd(); err != nil {
 			errorf(cmd, "%s", err)
-			return errExitCode(1)
+		} else {
+			cdStack.push(cwd)
 		}
-		cdStack.push(cwd)
 
 		user, err := user.Current()
 		if err != nil {
