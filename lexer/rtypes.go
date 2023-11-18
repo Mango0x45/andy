@@ -23,8 +23,8 @@ func isEol(r rune) bool {
 func IsRefChar(r rune) bool {
 	return unicode.IsLetter(r) ||
 		r == '_' ||
-		r == 'ʹ' ||
-		r == 'ʺ' ||
+		r == '′' ||
+		r == '″' ||
 		r == '‴' ||
 		r == '⁗'
 }
