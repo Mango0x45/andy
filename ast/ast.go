@@ -5,8 +5,8 @@ import (
 	"os/user"
 	"strings"
 
+	"git.sr.ht/~mango/andy/builtin"
 	"git.sr.ht/~mango/andy/lexer"
-	"git.sr.ht/~mango/andy/vm/vars"
 )
 
 // See grammar.ebnf in the project root for details
@@ -188,7 +188,7 @@ func (s String) ToStrings() []string {
 type VarRef string
 
 func (vr VarRef) ToStrings() []string {
-	xs, _ := vars.VarTable[string(vr)]
+	xs, _ := builtin.VarTable[string(vr)]
 	return xs
 }
 

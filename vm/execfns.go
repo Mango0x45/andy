@@ -8,6 +8,7 @@ import (
 	"sync"
 
 	"git.sr.ht/~mango/andy/ast"
+	"git.sr.ht/~mango/andy/builtin"
 )
 
 const appendFlags = os.O_APPEND | os.O_CREATE | os.O_WRONLY
@@ -217,8 +218,8 @@ func (vm *Vm) execSimple(cmd *ast.Simple) commandResult {
 		}
 	}
 
-	if f, ok := builtins[c.Args[0]]; ok {
-		return f(c)
+	if f, ok := builtin.Commands[c.Args[0]]; ok {
+		return errExitCode(f(c))
 	}
 	switch err := c.Run(); err.(type) {
 	case nil:
