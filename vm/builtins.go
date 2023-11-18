@@ -28,7 +28,7 @@ func builtinCd(cmd *exec.Cmd) commandResult {
 	case 1:
 		cwd, err := os.Getwd()
 		if err != nil {
-			fmt.Fprintf(cmd.Stderr, "cd: %s\n", err)
+			errorf(cmd, "%s", err)
 			return errExitCode(1)
 		}
 		cdStack.push(cwd)
@@ -43,14 +43,14 @@ func builtinCd(cmd *exec.Cmd) commandResult {
 		if dst == "-" {
 			maybe := cdStack.pop()
 			if maybe == nil {
-				fmt.Fprintln(cmd.Stderr, "cd: the directory stack is empty")
+				errorf(cmd, "the directory stack is empty")
 				return errExitCode(1)
 			}
 			dst = *maybe
 		} else {
 			cwd, err := os.Getwd()
 			if err != nil {
-				fmt.Fprintf(cmd.Stderr, "cd: %s\n", err)
+				errorf(cmd, "%s", err)
 				return errExitCode(1)
 			}
 			cdStack.push(cwd)
@@ -80,7 +80,7 @@ func builtinEcho(cmd *exec.Cmd) commandResult {
 func builtinFalse(cmd *exec.Cmd) commandResult {
 	n := len(cmd.Args) - 1
 	if n > 0 {
-		fmt.Fprintf(cmd.Stderr, "andy: %d arguments to ‘false’ are being ignored\n", n)
+		errorf(cmd, "%d arguments are being ignored", n)
 	}
 	return errExitCode(1)
 }
@@ -101,9 +101,8 @@ func builtinSet(cmd *exec.Cmd) commandResult {
 	}
 
 	if argc == 2 {
-		_, ok := vars.VarTable[ident]
-		if !ok {
-			fmt.Fprintf(cmd.Stderr, "andy: variable ‘$%s’ was already unset\n", ident)
+		if _, ok := vars.VarTable[ident]; !ok {
+			errorf(cmd, "variable ‘%s’ was already unset", ident)
 			return errExitCode(1)
 		}
 		delete(vars.VarTable, ident)
@@ -117,11 +116,12 @@ func builtinSet(cmd *exec.Cmd) commandResult {
 func builtinTrue(cmd *exec.Cmd) commandResult {
 	n := len(cmd.Args) - 1
 	if n > 0 {
-		fmt.Fprintf(cmd.Stderr, "andy: %d arguments to ‘true’ are being ignored\n", n)
+		errorf(cmd, "%d arguments are being ignored", n)
 	}
 	return errExitCode(0)
 }
 
 func errorf(cmd *exec.Cmd, format string, args ...any) {
-	fmt.Fprintf(cmd.Stderr, "andy: "+format+"\n", args...)
+	format = fmt.Sprintf("%s: %s\n", cmd.Args[0], format)
+	fmt.Fprintf(cmd.Stderr, format, args...)
 }
