@@ -113,7 +113,12 @@ func lexArg(l *lexer) lexFn {
 }
 
 func lexVarRef(l *lexer) lexFn {
+	kind := TokVarRef
 	l.next() // Consume ‘$’
+	if l.peek() == '^' {
+		l.next()
+		kind = TokFlatRef
+	}
 	l.start = l.pos
 
 	l.pos += strings.IndexFunc(l.input[l.pos:], func(r rune) bool {
@@ -127,7 +132,7 @@ func lexVarRef(l *lexer) lexFn {
 		l.emit(TokFlatRef)
 		return lexStringDouble
 	}
-	l.emit(TokVarRef)
+	l.emit(kind)
 	return lexMaybeConcat
 }
 

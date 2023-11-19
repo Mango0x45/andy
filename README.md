@@ -34,6 +34,7 @@ a while.  The currently implemented features are:
 - [X] While expressions (`while cmd; cmd`)
 - [X] Tilde expansion (`echo ~ ~username`)
 - [X] Setting- and reading variables (`set x foo; set xʹ $x.c; echo $xʹ`)
+- [X] Flattening variables (`$^var`)
 
 ## Example
 
