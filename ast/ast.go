@@ -142,6 +142,8 @@ func NewValue(t lexer.Token) Value {
 		return Argument(t.Val)
 	case lexer.TokString:
 		return String(t.Val)
+	case lexer.TokFlatRef:
+		return FlatRef(t.Val)
 	case lexer.TokVarRef:
 		return VarRef(t.Val)
 	}
@@ -183,6 +185,13 @@ type String string
 
 func (s String) ToStrings() []string {
 	return []string{string(s)}
+}
+
+type FlatRef string
+
+func (fr FlatRef) ToStrings() []string {
+	xs, _ := builtin.VarTable[string(fr)]
+	return []string{strings.Join(xs, " ")}
 }
 
 type VarRef string

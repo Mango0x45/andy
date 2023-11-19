@@ -12,10 +12,11 @@ const (
 	TokEndStmt // End of statement, either a newline or semicolon
 	TokEof     // End of file
 
-	TokArg    // An unquoted string
-	TokConcat // Concatination between two values
-	TokVarRef // A variable reference
-	TokString // A quoted string
+	TokArg     // An unquoted string
+	TokConcat  // Concatination between two values
+	TokFlatRef // A flattened variable reference
+	TokVarRef  // A variable reference
+	TokString  // A quoted string
 
 	TokAppend  // The ‘>>’ operator
 	TokClobber // The ‘>!’ operator
@@ -59,6 +60,8 @@ func (t Token) String() string {
 		return "‘" + t.Val + "’"
 	case TokConcat:
 		return "value concatination"
+	case TokFlatRef:
+		return fmt.Sprintf("‘$^%s’", t.Val)
 	case TokVarRef:
 		return fmt.Sprintf("‘$%s’", t.Val)
 

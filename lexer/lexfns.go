@@ -7,6 +7,7 @@ import (
 
 var backslashEsc = map[rune]rune{
 	'\\': '\\',
+	'$':  '$',
 	'0':  '\000',
 	'a':  '\a',
 	'b':  '\b',
@@ -122,6 +123,10 @@ func lexVarRef(l *lexer) lexFn {
 		l.pos = len(l.input)
 	}
 
+	if l.inQuotes {
+		l.emit(TokFlatRef)
+		return lexStringDouble
+	}
 	l.emit(TokVarRef)
 	return lexMaybeConcat
 }
@@ -142,7 +147,13 @@ func lexStringSingle(l *lexer) lexFn {
 }
 
 func lexStringDouble(l *lexer) lexFn {
-	l.next() // Consume quote
+	// Consume quote
+	if l.inQuotes {
+		l.emit(TokConcat)
+		l.inQuotes = false
+	} else {
+		l.next()
+	}
 
 	sb := strings.Builder{}
 	for {
@@ -155,6 +166,10 @@ func lexStringDouble(l *lexer) lexFn {
 				return l.errorf("invalid escape sequence ‘\\%c’", r)
 			}
 			sb.WriteRune(r)
+		case '$':
+			l.backup()
+			l.inQuotes = true
+			fallthrough
 		case '"':
 			l.Out <- Token{TokString, sb.String()}
 			return lexMaybeConcat

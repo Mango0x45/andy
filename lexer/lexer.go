@@ -8,11 +8,12 @@ import (
 const eof rune = -1
 
 type lexer struct {
-	input string     // The input string to lex
-	start int        // The start of the current token in input
-	pos   int        // The pos of the cursor in input
-	width int        // Width of the last rune lexed
-	Out   chan Token // Token output channel
+	input    string     // The input string to lex
+	inQuotes bool       // If we’re in double quotes
+	Out      chan Token // Token output channel
+	pos      int        // The pos of the cursor in input
+	start    int        // The start of the current token in input
+	width    int        // Width of the last rune lexed
 }
 
 func New(input string) *lexer {
