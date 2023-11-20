@@ -119,3 +119,10 @@ func TestVariables(t *testing.T) {
 		"foo bar baz foo bar baz\n"
 	runAndCapture(t, "variables", s, "")
 }
+
+func TestIndex(t *testing.T) {
+	out := "1\n2\n3\n1\n2\n3\n"
+	err := "bad index\n" +
+		"out of range\n"
+	runAndCapture(t, "index", out, err)
+}

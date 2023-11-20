@@ -1,0 +1,9 @@
+set xs 1 2 3
+echo $xs[ 1]
+echo $xs[ 2]
+echo $xs[ 3]
+echo $xs[-3]
+echo $xs[foo] || echo 'bad index' >!/dev/stderr
+echo $xs[-2]
+echo $xs[-1]
+echo $xs[342423843272572843] || echo 'out of range' >!/dev/stderr
