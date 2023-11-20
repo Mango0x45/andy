@@ -105,3 +105,17 @@ func TestTilde(t *testing.T) {
 		" ~\n"
 	runAndCapture(t, "tilde", s, "")
 }
+
+func TestVariables(t *testing.T) {
+	s := "0\n" +
+		"foo.c\n" +
+		"bar.c\n" +
+		"baz.c\n" +
+		"foo bar baz.c\n" +
+		"3.c\n" +
+		"barb\n" +
+		"That barb was sharp\n" +
+		"1 2 3\n" +
+		"foo bar baz foo bar baz\n"
+	runAndCapture(t, "variables", s, "")
+}
