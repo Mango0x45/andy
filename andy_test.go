@@ -123,7 +123,8 @@ func TestVariables(t *testing.T) {
 func TestIndex(t *testing.T) {
 	out := "1\n2\n3\n1\n2\n3\n" +
 		"1\n2\n3\n1 2 3\n3 2 1\n" +
-		"1 1 1 1 1\n6\n"
+		"1 1 1 1 1\n6\n" +
+		"1.c 1.o 3.c 3.o\n"
 	err := "bad index\n" +
 		"out of range\n"
 	runAndCapture(t, "index", out, err)
