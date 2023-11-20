@@ -53,6 +53,9 @@ func lexDefault(l *lexer) lexFn {
 			return lexMaybeConcat
 		case r == '#':
 			return skipComment
+		case r == '$':
+			l.backup()
+			return lexVarRef
 		case unicode.IsSpace(r):
 		default:
 			l.backup()

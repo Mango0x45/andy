@@ -200,6 +200,8 @@ func (p *Parser) parseList() ast.List {
 			return xs
 		case lexer.TokArg, lexer.TokString:
 			xs = append(xs, ast.NewValue(t))
+		case lexer.TokVarRef, lexer.TokVarFlat, lexer.TokVarLen:
+			xs = append(xs, ast.NewVarRef(t))
 		case lexer.TokPOpen:
 			xs = append(xs, p.parseList()...)
 		default:
