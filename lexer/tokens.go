@@ -29,10 +29,12 @@ const (
 	TokLAnd // The ‘&&’ operator
 	TokLOr  // The ‘||’ operator
 
-	TokBOpen  // The opening brace of a compound command
-	TokBClose // The opening brace of a compound command
-	TokPOpen  // The opening parenthesis of a list
-	TokPClose // The closing parenthesis of a list
+	TokBcOpen  // The opening brace of a compound command
+	TokBcClose // The closing brace of a compound command
+	TokBkOpen  // The opening bracket of a variable index
+	TokBkClose // The closing bracket of a variable index
+	TokPOpen   // The opening parenthesis of a list
+	TokPClose  // The closing parenthesis of a list
 )
 
 type Token struct {
@@ -85,10 +87,14 @@ func (t Token) String() string {
 	case TokLOr:
 		return "‘||’"
 
-	case TokBOpen:
+	case TokBcOpen:
 		return "‘{’"
-	case TokBClose:
+	case TokBcClose:
 		return "‘}’"
+	case TokBkOpen:
+		return "‘[’"
+	case TokBkClose:
+		return "‘]’"
 	case TokPOpen:
 		return "‘(’"
 	case TokPClose:

@@ -36,6 +36,7 @@ a while.  The currently implemented features are:
 - [X] Setting- and reading variables (`set x foo; set xʹ $x.c; echo $xʹ`)
 - [X] Flattening variables (`$^var`)
 - [X] Get variable length (`$#var`)
+- [X] Index into variables (`$var[1 1 -2 5]`)
 
 ## Example
 

@@ -1,4 +1,4 @@
-package ast
+package vm
 
 import "git.sr.ht/~mango/andy/lexer"
 

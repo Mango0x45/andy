@@ -1,8 +1,8 @@
 package parser
 
 import (
-	"git.sr.ht/~mango/andy/ast"
 	"git.sr.ht/~mango/andy/lexer"
+	"git.sr.ht/~mango/andy/vm"
 )
 
 type Parser struct {
@@ -14,7 +14,7 @@ func New(stream <-chan lexer.Token) *Parser {
 	return &Parser{stream: stream}
 }
 
-func (p *Parser) Run() ast.Program {
+func (p *Parser) Run() vm.Program {
 	return p.parseProgram()
 }
 

@@ -43,13 +43,20 @@ func lexDefault(l *lexer) lexFn {
 		case r == '>':
 			return lexWrite
 		case r == '{':
-			l.emit(TokBOpen)
+			l.emit(TokBcOpen)
 		case r == '}':
-			l.emit(TokBClose)
+			l.emit(TokBcClose)
 		case r == '(':
 			l.emit(TokPOpen)
 		case r == ')':
 			l.emit(TokPClose)
+			return lexMaybeConcat
+		case r == ']' && l.brktDepth > 0:
+			l.emit(TokBkClose)
+			l.brktDepth--
+			if l.inQuotes {
+				return lexStringDouble
+			}
 			return lexMaybeConcat
 		case r == '#':
 			return skipComment
@@ -105,6 +112,10 @@ func lexArg(l *lexer) lexFn {
 			} else {
 				return l.errorf("invalid escape sequence ‘\\%c’", r)
 			}
+		case r == ']' && l.brktDepth > 0:
+			l.backup()
+			l.Out <- Token{TokArg, sb.String()}
+			return lexDefault
 		case unicode.IsSpace(r) || isMetaChar(r) || isEol(r) || r == eof:
 			l.backup()
 			l.Out <- Token{TokArg, sb.String()}
@@ -150,16 +161,21 @@ func lexVarRef(l *lexer) lexFn {
 		l.pos = len(l.input)
 	}
 
+	if braces && l.peek() != '}' {
+		return l.errorf("unterminated braced variable ‘${%s’",
+			l.input[l.start:l.pos])
+	}
+	l.emit(kind)
 	if braces {
-		if l.peek() != '}' {
-			return l.errorf("unterminated braced variable ‘${%s’",
-				l.input[l.start:l.pos])
-		}
-		// Defer so that l.emit() doesn’t emit the brace in .Val
-		defer l.next()
+		l.next() // Consume closing brace
 	}
 
-	l.emit(kind)
+	if l.peek() == '[' {
+		l.emit(TokBkOpen)
+		l.next()
+		l.brktDepth++
+		return lexDefault
+	}
 	if l.inQuotes {
 		return lexStringDouble
 	}

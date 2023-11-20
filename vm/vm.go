@@ -3,8 +3,6 @@ package vm
 import (
 	"fmt"
 	"os"
-
-	"git.sr.ht/~mango/andy/ast"
 )
 
 type Vm struct {
@@ -20,7 +18,7 @@ func New(interactive bool) *Vm {
 	return &Vm{interactive: interactive}
 }
 
-func (vm *Vm) Run(prog ast.Program) {
+func (vm *Vm) Run(prog Program) {
 	for _, cl := range prog {
 		ret := vm.execCmdList(cl, context{os.Stdin, os.Stdout, os.Stderr})
 		vm.Status = ret.ExitCode()

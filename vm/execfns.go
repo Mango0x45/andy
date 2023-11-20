@@ -7,13 +7,12 @@ import (
 	"os/exec"
 	"sync"
 
-	"git.sr.ht/~mango/andy/ast"
 	"git.sr.ht/~mango/andy/builtin"
 )
 
 const appendFlags = os.O_APPEND | os.O_CREATE | os.O_WRONLY
 
-func (vm *Vm) execCmdList(cl ast.CommandList, ctx context) commandResult {
+func (vm *Vm) execCmdList(cl CommandList, ctx context) commandResult {
 	if cl.Lhs == nil {
 		return vm.execPipeline(cl.Rhs, ctx)
 	}
@@ -21,14 +20,14 @@ func (vm *Vm) execCmdList(cl ast.CommandList, ctx context) commandResult {
 	res := vm.execCmdList(*cl.Lhs, ctx)
 	ec := res.ExitCode()
 
-	if cl.Op == ast.LAnd && ec == 0 || cl.Op == ast.LOr && ec != 0 {
+	if cl.Op == LAnd && ec == 0 || cl.Op == LOr && ec != 0 {
 		return vm.execPipeline(cl.Rhs, ctx)
 	}
 
 	return res
 }
 
-func (vm *Vm) execPipeline(pl ast.Pipeline, ctx context) commandResult {
+func (vm *Vm) execPipeline(pl Pipeline, ctx context) commandResult {
 	n := len(pl)
 
 	for i := range pl[:n-1] {
@@ -46,7 +45,7 @@ func (vm *Vm) execPipeline(pl ast.Pipeline, ctx context) commandResult {
 	wg.Add(n)
 
 	for _, cmd := range pl {
-		go func(cmd ast.Command) {
+		go func(cmd Command) {
 			c <- vm.execCommand(cmd, ctx)
 			wg.Done()
 		}(cmd)
@@ -64,7 +63,7 @@ func (vm *Vm) execPipeline(pl ast.Pipeline, ctx context) commandResult {
 	return errExitCode(0)
 }
 
-func (vm *Vm) execCommand(cmd ast.Command, ctx context) commandResult {
+func (vm *Vm) execCommand(cmd Command, ctx context) commandResult {
 	switch cmd.In() {
 	case nil:
 		cmd.SetIn(ctx.in)
@@ -90,19 +89,19 @@ func (vm *Vm) execCommand(cmd ast.Command, ctx context) commandResult {
 	}
 
 	switch cmd.(type) {
-	case *ast.Simple:
-		return vm.execSimple(cmd.(*ast.Simple))
-	case *ast.Compound:
-		return vm.execCompound(cmd.(*ast.Compound))
-	case *ast.If:
-		return vm.execIf(cmd.(*ast.If))
-	case *ast.While:
-		return vm.execWhile(cmd.(*ast.While))
+	case *Simple:
+		return vm.execSimple(cmd.(*Simple))
+	case *Compound:
+		return vm.execCompound(cmd.(*Compound))
+	case *If:
+		return vm.execIf(cmd.(*If))
+	case *While:
+		return vm.execWhile(cmd.(*While))
 	}
 	panic("unreachable")
 }
 
-func (vm *Vm) execWhile(cmd *ast.While) commandResult {
+func (vm *Vm) execWhile(cmd *While) commandResult {
 	ctx := context{cmd.In(), cmd.Out(), cmd.Err()}
 	for {
 		res := vm.execCmdList(cmd.Cond, ctx)
@@ -119,7 +118,7 @@ func (vm *Vm) execWhile(cmd *ast.While) commandResult {
 	}
 }
 
-func (vm *Vm) execIf(cmd *ast.If) commandResult {
+func (vm *Vm) execIf(cmd *If) commandResult {
 	ctx := context{cmd.In(), cmd.Out(), cmd.Err()}
 	res := vm.execCmdList(cmd.Cond, ctx)
 	switch ec, ok := res.(errExitCode); {
@@ -133,7 +132,7 @@ func (vm *Vm) execIf(cmd *ast.If) commandResult {
 	return errExitCode(0)
 }
 
-func (vm *Vm) execCompound(cmd *ast.Compound) commandResult {
+func (vm *Vm) execCompound(cmd *Compound) commandResult {
 	ctx := context{cmd.In(), cmd.Out(), cmd.Err()}
 	for _, cl := range cmd.Cmds {
 		if res := vm.execCmdList(cl, ctx); res.ExitCode() != 0 {
@@ -143,10 +142,14 @@ func (vm *Vm) execCompound(cmd *ast.Compound) commandResult {
 	return errExitCode(0)
 }
 
-func (vm *Vm) execSimple(cmd *ast.Simple) commandResult {
+func (vm *Vm) execSimple(cmd *Simple) commandResult {
 	args := make([]string, 0, cap(cmd.Args))
 	for _, v := range cmd.Args {
-		args = append(args, v.ToStrings()...)
+		ss, err := v.ToStrings()
+		if err != nil {
+			return err
+		}
+		args = append(args, ss...)
 	}
 
 	c := exec.Command(args[0], args[1:]...)
@@ -155,18 +158,21 @@ func (vm *Vm) execSimple(cmd *ast.Simple) commandResult {
 	for _, r := range cmd.Redirs {
 		var name string
 		switch r.File.(type) {
-		case ast.Argument:
-			name = string(r.File.(ast.Argument))
+		case Argument:
+			name = string(r.File.(Argument))
 
 			switch {
-			case r.Type == ast.RedirRead && name == "_":
+			case r.Type == RedirRead && name == "_":
 				name = os.DevNull
-			case r.Type == ast.RedirWrite && name == "_":
-				r.Type = ast.RedirClob
+			case r.Type == RedirWrite && name == "_":
+				r.Type = RedirClob
 				name = os.DevNull
 			}
 		default:
-			xs := r.File.ToStrings()
+			xs, err := r.File.ToStrings()
+			if err != nil {
+				return err
+			}
 			if len(xs) > 1 {
 				return errExpected{
 					want: "filename",
@@ -177,28 +183,28 @@ func (vm *Vm) execSimple(cmd *ast.Simple) commandResult {
 		}
 
 		switch r.Type {
-		case ast.RedirAppend:
+		case RedirAppend:
 			fp, err := os.OpenFile(name, appendFlags, 0666)
 			if err != nil {
 				return errInternal{err}
 			}
 			defer fp.Close()
 			c.Stdout = fp
-		case ast.RedirClob:
+		case RedirClob:
 			fp, err := os.Create(name)
 			if err != nil {
 				return errInternal{err}
 			}
 			defer fp.Close()
 			c.Stdout = fp
-		case ast.RedirRead:
+		case RedirRead:
 			fp, err := os.Open(name)
 			if err != nil {
 				return errInternal{err}
 			}
 			defer fp.Close()
 			c.Stdin = fp
-		case ast.RedirWrite:
+		case RedirWrite:
 			_, err := os.Stat(name)
 			switch {
 			case errors.Is(err, os.ErrNotExist):

@@ -4,12 +4,12 @@ import (
 	"fmt"
 	"os"
 
-	"git.sr.ht/~mango/andy/ast"
 	"git.sr.ht/~mango/andy/lexer"
+	"git.sr.ht/~mango/andy/vm"
 )
 
-func (p *Parser) parseProgram() ast.Program {
-	prog := ast.Program{}
+func (p *Parser) parseProgram() vm.Program {
+	prog := vm.Program{}
 
 	for {
 		switch p.peek().Kind {
@@ -23,15 +23,15 @@ func (p *Parser) parseProgram() ast.Program {
 	}
 }
 
-func (p *Parser) parseCommandList() ast.CommandList {
+func (p *Parser) parseCommandList() vm.CommandList {
 	xlist := p.parseXCommandList()
-	cmdList := ast.CommandList{Lhs: nil, Rhs: xlist.Lhs}
+	cmdList := vm.CommandList{Lhs: nil, Rhs: xlist.Lhs}
 	op := xlist.Op
 
 	for xlist.Rhs != nil {
 		xlist = *xlist.Rhs
 		tmp := cmdList
-		cmdList = ast.CommandList{
+		cmdList = vm.CommandList{
 			Lhs: &tmp,
 			Op:  op,
 			Rhs: xlist.Lhs,
@@ -42,14 +42,14 @@ func (p *Parser) parseCommandList() ast.CommandList {
 	return cmdList
 }
 
-func (p *Parser) parseXCommandList() ast.XCommandList {
-	cmdList := ast.XCommandList{Lhs: p.parsePipeline()}
+func (p *Parser) parseXCommandList() vm.XCommandList {
+	cmdList := vm.XCommandList{Lhs: p.parsePipeline()}
 	for {
 		switch p.peek().Kind {
 		case lexer.TokLAnd:
-			cmdList.Op = ast.LAnd
+			cmdList.Op = vm.LAnd
 		case lexer.TokLOr:
-			cmdList.Op = ast.LOr
+			cmdList.Op = vm.LOr
 		default:
 			return cmdList
 		}
@@ -64,8 +64,8 @@ func (p *Parser) parseXCommandList() ast.XCommandList {
 	}
 }
 
-func (p *Parser) parsePipeline() ast.Pipeline {
-	pipe := ast.Pipeline{p.parseCommand()}
+func (p *Parser) parsePipeline() vm.Pipeline {
+	pipe := vm.Pipeline{p.parseCommand()}
 
 	for {
 		switch p.peek().Kind {
@@ -80,7 +80,7 @@ func (p *Parser) parsePipeline() ast.Pipeline {
 	}
 }
 
-func (p *Parser) parseCommand() ast.Command {
+func (p *Parser) parseCommand() vm.Command {
 	switch t := p.peek(); {
 	case t.Kind == lexer.TokArg && t.Val == "if":
 		p.next()
@@ -88,22 +88,22 @@ func (p *Parser) parseCommand() ast.Command {
 	case t.Kind == lexer.TokArg && t.Val == "while":
 		p.next()
 		return p.parseWhile()
-	case t.Kind == lexer.TokBOpen:
+	case t.Kind == lexer.TokBcOpen:
 		p.next()
 		return p.parseCompound()
 	}
 	return p.parseSimple()
 }
 
-func (p *Parser) parseWhile() *ast.While {
-	return &ast.While{
+func (p *Parser) parseWhile() *vm.While {
+	return &vm.While{
 		Cond: p.parseCommandList(),
 		Body: p.parseCommandList(),
 	}
 }
 
-func (p *Parser) parseIf() *ast.If {
-	if_ := ast.If{
+func (p *Parser) parseIf() *vm.If {
+	if_ := vm.If{
 		Cond: p.parseCommandList(),
 		Body: p.parseCommandList(),
 	}
@@ -117,14 +117,14 @@ func (p *Parser) parseIf() *ast.If {
 	return &if_
 }
 
-func (p *Parser) parseCompound() *ast.Compound {
-	cmds := make([]ast.CommandList, 0, 4) // Add a little capacity
+func (p *Parser) parseCompound() *vm.Compound {
+	cmds := make([]vm.CommandList, 0, 4) // Add a little capacity
 
 	for {
 		switch p.peek().Kind {
-		case lexer.TokBClose:
+		case lexer.TokBcClose:
 			p.next()
-			return &ast.Compound{Cmds: cmds}
+			return &vm.Compound{Cmds: cmds}
 		case lexer.TokEndStmt:
 			p.next()
 		case lexer.TokEof:
@@ -135,33 +135,33 @@ func (p *Parser) parseCompound() *ast.Compound {
 	}
 }
 
-func (p *Parser) parseSimple() *ast.Simple {
-	args := make([]ast.Value, 0, 4) // Add a little capacity
-	var redirs []ast.Redirect
+func (p *Parser) parseSimple() *vm.Simple {
+	args := make([]vm.Value, 0, 4) // Add a little capacity
+	var redirs []vm.Redirect
 
 	args = append(args, p.parseValue())
-	for ast.IsValue(p.peek().Kind) {
+	for vm.IsValue(p.peek().Kind) {
 		args = append(args, p.parseValue())
 	}
 
 	for {
 		switch t := p.peek(); {
-		case ast.IsRedir(t.Kind):
+		case vm.IsRedir(t.Kind):
 			p.next()
-			r := ast.NewRedir(t.Kind)
+			r := vm.NewRedir(t.Kind)
 
 			switch {
-			case ast.IsValue(p.peek().Kind):
+			case vm.IsValue(p.peek().Kind):
 				r.File = p.parseValue()
 			default:
 				die(errExpected{"file after redirect", t})
 			}
 
 			redirs = append(redirs, r)
-		case ast.IsValue(t.Kind):
+		case vm.IsValue(t.Kind):
 			die(errExpected{"semicolon or newline", t})
 		default:
-			return &ast.Simple{
+			return &vm.Simple{
 				Args:   args,
 				Redirs: redirs,
 			}
@@ -169,14 +169,18 @@ func (p *Parser) parseSimple() *ast.Simple {
 	}
 }
 
-func (p *Parser) parseValue() ast.Value {
-	var v ast.Value
+func (p *Parser) parseValue() vm.Value {
+	var v vm.Value
 
 	switch t := p.next(); t.Kind {
 	case lexer.TokArg, lexer.TokString:
-		v = ast.NewValue(t)
+		v = vm.NewValue(t)
 	case lexer.TokVarRef, lexer.TokVarFlat, lexer.TokVarLen:
-		v = ast.NewVarRef(t)
+		vr := vm.NewVarRef(t)
+		if p.peek().Kind == lexer.TokBkOpen {
+			vr.Indices = p.parseIndices()
+		}
+		v = vr
 	case lexer.TokPOpen:
 		v = p.parseList()
 	default:
@@ -185,23 +189,36 @@ func (p *Parser) parseValue() ast.Value {
 
 	if p.peek().Kind == lexer.TokConcat {
 		p.next()
-		v = ast.Concat{Lhs: v, Rhs: p.parseValue()}
+		v = vm.Concat{Lhs: v, Rhs: p.parseValue()}
 	}
 
 	return v
 }
 
-func (p *Parser) parseList() ast.List {
-	xs := ast.List{}
+func (p *Parser) parseIndices() []vm.Value {
+	p.next() // Consume ‘[’
+	xs := []vm.Value{}
+	for vm.IsValue(p.peek().Kind) {
+		xs = append(xs, p.parseValue())
+	}
+	if p.peek().Kind != lexer.TokBkClose {
+		die(errExpected{"closing bracket", p.next()})
+	}
+	p.next()
+	return xs
+}
+
+func (p *Parser) parseList() vm.List {
+	xs := vm.List{}
 
 	for {
 		switch t := p.next(); t.Kind {
 		case lexer.TokPClose:
 			return xs
 		case lexer.TokArg, lexer.TokString:
-			xs = append(xs, ast.NewValue(t))
+			xs = append(xs, vm.NewValue(t))
 		case lexer.TokVarRef, lexer.TokVarFlat, lexer.TokVarLen:
-			xs = append(xs, ast.NewVarRef(t))
+			xs = append(xs, vm.NewVarRef(t))
 		case lexer.TokPOpen:
 			xs = append(xs, p.parseList()...)
 		default:

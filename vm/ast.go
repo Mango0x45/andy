@@ -1,6 +1,8 @@
-package ast
+package vm
 
 import (
+	"errors"
+	"fmt"
 	"os"
 	"os/user"
 	"strconv"
@@ -134,7 +136,7 @@ func NewRedir(k lexer.TokenType) Redirect {
 
 // Value is anything that can be turned into a (list of) string(s)
 type Value interface {
-	ToStrings() []string
+	ToStrings() ([]string, commandResult)
 }
 
 func NewValue(t lexer.Token) Value {
@@ -149,14 +151,18 @@ func NewValue(t lexer.Token) Value {
 
 type Argument string
 
-func (a Argument) ToStrings() []string {
-	return []string{a.tildeExpand()}
+func (a Argument) ToStrings() ([]string, commandResult) {
+	s, err := a.tildeExpand()
+	if err != nil {
+		return []string{}, errInternal{err}
+	}
+	return []string{s}, nil
 }
 
-func (a Argument) tildeExpand() string {
+func (a Argument) tildeExpand() (string, error) {
 	s := string(a)
 	if len(s) == 0 || s[0] != '~' {
-		return s
+		return s, nil
 	}
 	i := strings.IndexByte(s, '/')
 	if i == -1 {
@@ -166,22 +172,26 @@ func (a Argument) tildeExpand() string {
 	if i == 1 {
 		home, err := os.UserHomeDir()
 		if err != nil {
-			return s
+			return "", err
 		}
-		return home + s[i:]
+		return home + s[i:], nil
 	}
 
-	u, err := user.Lookup(s[1:i])
-	if err != nil {
-		return s
+	name := s[1:i]
+	switch u, err := user.Lookup(name); {
+	case errors.Is(err, user.UnknownUserError(name)):
+		return s, nil
+	case err != nil:
+		return "", err
+	default:
+		return u.HomeDir + s[i:], nil
 	}
-	return u.HomeDir + s[i:]
 }
 
 type String string
 
-func (s String) ToStrings() []string {
-	return []string{string(s)}
+func (s String) ToStrings() ([]string, commandResult) {
+	return []string{string(s)}, nil
 }
 
 type VarRefType int
@@ -193,21 +203,74 @@ const (
 )
 
 type VarRef struct {
-	Ident string
-	Type  VarRefType
+	Ident   string
+	Type    VarRefType
+	Indices []Value
 }
 
-func (vr VarRef) ToStrings() []string {
-	xs, _ := builtin.VarTable[vr.Ident]
-	switch vr.Type {
-	case VrExpand:
-		return xs
-	case VrFlatten:
-		return []string{strings.Join(xs, " ")}
-	case VrLength:
-		return []string{strconv.Itoa(len(xs))}
+func getIndex(s string, n int) (int, commandResult) {
+	i, err := strconv.Atoi(s)
+	if err, ok := err.(*strconv.NumError); ok {
+		var str string
+
+		switch {
+		case errors.Is(err, strconv.ErrRange):
+			str = fmt.Sprintf("index ‘%s’ is out of range; what are you even doing?", s)
+		case errors.Is(err, strconv.ErrSyntax):
+			str = fmt.Sprintf("‘%s’ isn’t a valid index", s)
+		}
+
+		return 0, errInternal{errors.New(str)}
 	}
-	panic("unreachable")
+
+	if i < 0 {
+		i += n
+	} else {
+		i--
+	}
+
+	if i == -1 {
+		str := "index ‘0’ is always invalid; did you mean ‘1’?"
+		return 0, errInternal{errors.New(str)}
+	}
+	if i < 0 || i >= n {
+		str := fmt.Sprintf("invalid index ‘%s’ into list of length %d",
+			s, n)
+		return 0, errInternal{errors.New(str)}
+	}
+
+	return i, nil
+}
+
+func (vr VarRef) ToStrings() ([]string, commandResult) {
+	xs, _ := builtin.VarTable[vr.Ident]
+
+	if vr.Indices != nil {
+		ys := make([]string, 0, len(xs))
+		for _, i := range vr.Indices {
+			ss, err := i.ToStrings()
+			if err != nil {
+				return nil, err
+			}
+			for _, s := range ss {
+				i, err := getIndex(s, len(xs))
+				if err != nil {
+					return nil, errInternal{err}
+				}
+
+				ys = append(ys, xs[i])
+			}
+		}
+		xs = ys
+	}
+
+	switch vr.Type {
+	case VrFlatten:
+		xs = []string{strings.Join(xs, " ")}
+	case VrLength:
+		xs = []string{strconv.Itoa(len(xs))}
+	}
+	return xs, nil
 }
 
 func NewVarRef(t lexer.Token) VarRef {
@@ -225,9 +288,15 @@ type Concat struct {
 	Lhs, Rhs Value
 }
 
-func (c Concat) ToStrings() []string {
-	xs := c.Lhs.ToStrings()
-	ys := c.Rhs.ToStrings()
+func (c Concat) ToStrings() ([]string, commandResult) {
+	xs, err := c.Lhs.ToStrings()
+	if err != nil {
+		return []string{}, err
+	}
+	ys, err := c.Rhs.ToStrings()
+	if err != nil {
+		return []string{}, err
+	}
 	zs := make([]string, 0, len(xs)*len(ys))
 
 	for _, x := range xs {
@@ -236,17 +305,21 @@ func (c Concat) ToStrings() []string {
 		}
 	}
 
-	return zs
+	return zs, nil
 }
 
 type List []Value
 
-func (l List) ToStrings() []string {
+func (l List) ToStrings() ([]string, commandResult) {
 	xs := make([]string, 0, len(l))
 	for _, x := range l {
-		xs = append(xs, x.ToStrings()...)
+		ys, err := x.ToStrings()
+		if err != nil {
+			return []string{}, err
+		}
+		xs = append(xs, ys...)
 	}
-	return xs
+	return xs, nil
 }
 
 type BinaryOp int
