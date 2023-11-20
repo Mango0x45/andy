@@ -113,11 +113,23 @@ func lexArg(l *lexer) lexFn {
 }
 
 func lexVarRef(l *lexer) lexFn {
-	kind := TokVarRef
 	l.next() // Consume ‘$’
-	if l.peek() == '^' {
-		l.next()
+
+	// Flat or not?
+	kind := TokVarRef
+	if l.inQuotes {
 		kind = TokFlatRef
+	}
+	if l.peek() == '^' {
+		kind = TokFlatRef
+		l.next()
+	}
+
+	// Optional surrounding braces
+	braces := false
+	if l.peek() == '{' {
+		braces = true
+		l.next()
 	}
 	l.start = l.pos
 
@@ -128,11 +140,19 @@ func lexVarRef(l *lexer) lexFn {
 		l.pos = len(l.input)
 	}
 
+	if braces {
+		if l.peek() != '}' {
+			return l.errorf("unterminated braced variable ‘${%s’",
+				l.input[l.start:l.pos])
+		}
+		// Defer so that l.emit() doesn’t emit the brace in .Val
+		defer l.next()
+	}
+
+	l.emit(kind)
 	if l.inQuotes {
-		l.emit(TokFlatRef)
 		return lexStringDouble
 	}
-	l.emit(kind)
 	return lexMaybeConcat
 }
 
