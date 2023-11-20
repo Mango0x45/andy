@@ -118,17 +118,17 @@ func lexVarRef(l *lexer) lexFn {
 	// Flat or not?
 	kind := TokVarRef
 	if l.inQuotes {
-		kind = TokFlatRef
+		kind = TokVarFlat
 	}
 	switch l.peek() {
 	case '^':
 		if l.inQuotes {
 			return l.errorf("The ‘^’ variable prefix is redundant in double-quoted strings")
 		}
-		kind = TokFlatRef
+		kind = TokVarFlat
 		l.next()
 	case '#':
-		kind = TokRefLen
+		kind = TokVarLen
 		l.next()
 	}
 

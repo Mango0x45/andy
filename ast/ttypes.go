@@ -12,9 +12,9 @@ func IsRedir(kind lexer.TokenType) bool {
 func IsValue(kind lexer.TokenType) bool {
 	return kind == lexer.TokArg ||
 		kind == lexer.TokConcat ||
-		kind == lexer.TokFlatRef ||
 		kind == lexer.TokPOpen ||
 		kind == lexer.TokString ||
-		kind == lexer.TokVarRef ||
-		kind == lexer.TokRefLen
+		kind == lexer.TokVarFlat ||
+		kind == lexer.TokVarLen ||
+		kind == lexer.TokVarRef
 }

@@ -213,9 +213,9 @@ func (vr VarRef) ToStrings() []string {
 func NewVarRef(t lexer.Token) VarRef {
 	vr := VarRef{Ident: t.Val}
 	switch t.Kind {
-	case lexer.TokFlatRef:
+	case lexer.TokVarFlat:
 		vr.Type = VrFlatten
-	case lexer.TokRefLen:
+	case lexer.TokVarLen:
 		vr.Type = VrLength
 	}
 	return vr
