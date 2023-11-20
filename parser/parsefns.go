@@ -173,8 +173,10 @@ func (p *Parser) parseValue() ast.Value {
 	var v ast.Value
 
 	switch t := p.next(); t.Kind {
-	case lexer.TokArg, lexer.TokString, lexer.TokFlatRef, lexer.TokVarRef:
+	case lexer.TokArg, lexer.TokString:
 		v = ast.NewValue(t)
+	case lexer.TokVarRef, lexer.TokFlatRef, lexer.TokRefLen:
+		v = ast.NewVarRef(t)
 	case lexer.TokPOpen:
 		v = p.parseList()
 	default:

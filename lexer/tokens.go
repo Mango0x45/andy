@@ -15,6 +15,7 @@ const (
 	TokArg     // An unquoted string
 	TokConcat  // Concatination between two values
 	TokFlatRef // A flattened variable reference
+	TokRefLen  // The length of a variable
 	TokVarRef  // A variable reference
 	TokString  // A quoted string
 
@@ -62,6 +63,8 @@ func (t Token) String() string {
 		return "value concatination"
 	case TokFlatRef:
 		return fmt.Sprintf("‘$^%s’", t.Val)
+	case TokRefLen:
+		return fmt.Sprintf("‘$#%s’", t.Val)
 	case TokVarRef:
 		return fmt.Sprintf("‘$%s’", t.Val)
 

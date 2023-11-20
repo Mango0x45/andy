@@ -15,5 +15,6 @@ func IsValue(kind lexer.TokenType) bool {
 		kind == lexer.TokFlatRef ||
 		kind == lexer.TokPOpen ||
 		kind == lexer.TokString ||
-		kind == lexer.TokVarRef
+		kind == lexer.TokVarRef ||
+		kind == lexer.TokRefLen
 }

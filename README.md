@@ -35,6 +35,7 @@ a while.  The currently implemented features are:
 - [X] Tilde expansion (`echo ~ ~username`)
 - [X] Setting- and reading variables (`set x foo; set xʹ $x.c; echo $xʹ`)
 - [X] Flattening variables (`$^var`)
+- [X] Get variable length (`$#var`)
 
 ## Example
 

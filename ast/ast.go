@@ -3,6 +3,7 @@ package ast
 import (
 	"os"
 	"os/user"
+	"strconv"
 	"strings"
 
 	"git.sr.ht/~mango/andy/builtin"
@@ -142,10 +143,6 @@ func NewValue(t lexer.Token) Value {
 		return Argument(t.Val)
 	case lexer.TokString:
 		return String(t.Val)
-	case lexer.TokFlatRef:
-		return FlatRef(t.Val)
-	case lexer.TokVarRef:
-		return VarRef(t.Val)
 	}
 	panic("unreachable")
 }
@@ -187,18 +184,41 @@ func (s String) ToStrings() []string {
 	return []string{string(s)}
 }
 
-type FlatRef string
+type VarRefType int
 
-func (fr FlatRef) ToStrings() []string {
-	xs, _ := builtin.VarTable[string(fr)]
-	return []string{strings.Join(xs, " ")}
+const (
+	VrExpand VarRefType = iota
+	VrFlatten
+	VrLength
+)
+
+type VarRef struct {
+	Ident string
+	Type  VarRefType
 }
 
-type VarRef string
-
 func (vr VarRef) ToStrings() []string {
-	xs, _ := builtin.VarTable[string(vr)]
-	return xs
+	xs, _ := builtin.VarTable[vr.Ident]
+	switch vr.Type {
+	case VrExpand:
+		return xs
+	case VrFlatten:
+		return []string{strings.Join(xs, " ")}
+	case VrLength:
+		return []string{strconv.Itoa(len(xs))}
+	}
+	panic("unreachable")
+}
+
+func NewVarRef(t lexer.Token) VarRef {
+	vr := VarRef{Ident: t.Val}
+	switch t.Kind {
+	case lexer.TokFlatRef:
+		vr.Type = VrFlatten
+	case lexer.TokRefLen:
+		vr.Type = VrLength
+	}
+	return vr
 }
 
 type Concat struct {
