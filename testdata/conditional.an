@@ -1,0 +1,36 @@
+if true
+	echo true branch
+
+if false
+	echo false branch
+
+if true && false
+	echo false branch
+
+if true && true && true
+	echo true branch
+
+if test -f some-fake-file
+	echo false branch
+
+touch some-file
+if test ! -f some-file
+	echo false branch
+else echo true branch
+
+# TODO: Enable else-branch on its own line
+if test ! -f some-file
+	echo false branch
+else echo true branch
+rm some-file
+
+if { echo foo; echo bar } {
+	if echo baz
+		echo hello
+	else echo world
+}
+
+# Dangling-else
+if false
+	if true; echo foo
+	else echo bar

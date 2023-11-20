@@ -129,3 +129,12 @@ func TestIndex(t *testing.T) {
 		"out of range\n"
 	runAndCapture(t, "index", out, err)
 }
+
+func TestConditional(t *testing.T) {
+	s := "true branch\n" +
+		"true branch\n" +
+		"true branch\n" +
+		"true branch\n" +
+		"foo\nbar\nbaz\nhello\n"
+	runAndCapture(t, "conditional", s, "")
+}
