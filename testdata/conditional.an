@@ -34,3 +34,23 @@ if { echo foo; echo bar } {
 if false
 	if true; echo foo
 	else echo bar
+
+set x 2
+if test $x -eq 1 {
+	echo 'x == 1'
+} else if test $x -eq 2 {
+	echo 'x == 2'
+} else if test $x -eq 3 {
+	echo 'x == 3'
+} else {
+	echo 'x ∉ {1, 2, 3}'
+}
+
+set x 69
+if [ $x -eq 1 ]
+	echo 'x == 1'
+else if [ $x -eq 2 ]
+	echo 'x == 2'
+else if [ $x -eq 3 ]
+	echo 'x == 3'
+else echo 'x ∉ {1, 2, 3}'

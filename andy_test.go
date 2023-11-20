@@ -135,6 +135,8 @@ func TestConditional(t *testing.T) {
 		"true branch\n" +
 		"true branch\n" +
 		"true branch\n" +
-		"foo\nbar\nbaz\nhello\n"
+		"foo\nbar\nbaz\nhello\n" +
+		"x == 2\n" +
+		"x ∉ {1, 2, 3}\n"
 	runAndCapture(t, "conditional", s, "")
 }
