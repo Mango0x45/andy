@@ -110,6 +110,9 @@ func (p *Parser) parseIf() *vm.If {
 
 	if t := p.peek(); t.Kind == lexer.TokArg && t.Val == "else" {
 		p.next()
+		for p.peek().Kind == lexer.TokEndStmt {
+			p.next()
+		}
 		cl := p.parseCommandList()
 		if_.Else = &cl
 	}

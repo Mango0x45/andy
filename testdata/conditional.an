@@ -18,10 +18,10 @@ if test ! -f some-file
 	echo false branch
 else echo true branch
 
-# TODO: Enable else-branch on its own line
 if test ! -f some-file
 	echo false branch
-else echo true branch
+else
+	echo true branch
 rm some-file
 
 if { echo foo; echo bar } {
@@ -32,8 +32,10 @@ if { echo foo; echo bar } {
 
 # Dangling-else
 if false
-	if true; echo foo
-	else echo bar
+	if true
+		echo foo
+	else
+		echo bar
 
 set x 2
 if test $x -eq 1 {
@@ -53,4 +55,5 @@ else if [ $x -eq 2 ]
 	echo 'x == 2'
 else if [ $x -eq 3 ]
 	echo 'x == 3'
-else echo 'x ∉ {1, 2, 3}'
+else
+	echo 'x ∉ {1, 2, 3}'
