@@ -88,6 +88,75 @@ func (vm *Vm) execCommand(cmd Command, ctx context) commandResult {
 		defer cmd.Err().Close()
 	}
 
+	for _, r := range cmd.Redirs() {
+		var name string
+		switch r.File.(type) {
+		case Argument:
+			name = string(r.File.(Argument))
+
+			switch {
+			case r.Type == RedirRead && name == "_":
+				name = os.DevNull
+			case r.Type == RedirWrite && name == "_":
+				r.Type = RedirClob
+				name = os.DevNull
+			}
+		default:
+			xs, err := r.File.ToStrings()
+			if err != nil {
+				return err
+			}
+			if len(xs) > 1 {
+				return errExpected{
+					want: "filename",
+					got:  fmt.Sprintf("%d filesnames", len(xs)),
+				}
+			}
+			name = xs[0]
+		}
+
+		switch r.Type {
+		case RedirAppend:
+			fp, err := os.OpenFile(name, appendFlags, 0666)
+			if err != nil {
+				return errInternal{err}
+			}
+			defer fp.Close()
+			cmd.SetOut(fp)
+		case RedirClob:
+			fp, err := os.Create(name)
+			if err != nil {
+				return errInternal{err}
+			}
+			defer fp.Close()
+			cmd.SetOut(fp)
+		case RedirRead:
+			fp, err := os.Open(name)
+			if err != nil {
+				return errInternal{err}
+			}
+			defer fp.Close()
+			cmd.SetIn(fp)
+		case RedirWrite:
+			_, err := os.Stat(name)
+			switch {
+			case errors.Is(err, os.ErrNotExist):
+				fp, err := os.Create(name)
+				if err != nil {
+					return errInternal{err}
+				}
+				defer fp.Close()
+				cmd.SetOut(fp)
+			case err != nil:
+				return errFileOp{"stat", name, err}
+			default: // File exists
+				return errClobber{name}
+			}
+		default:
+			panic("unreachable")
+		}
+	}
+
 	switch cmd.(type) {
 	case *Simple:
 		return vm.execSimple(cmd.(*Simple))
@@ -169,75 +238,6 @@ func (vm *Vm) execSimple(cmd *Simple) commandResult {
 
 	c := exec.Command(args[0], args[1:]...)
 	c.Stdin, c.Stdout, c.Stderr = cmd.In(), cmd.Out(), cmd.Err()
-
-	for _, r := range cmd.redirs {
-		var name string
-		switch r.File.(type) {
-		case Argument:
-			name = string(r.File.(Argument))
-
-			switch {
-			case r.Type == RedirRead && name == "_":
-				name = os.DevNull
-			case r.Type == RedirWrite && name == "_":
-				r.Type = RedirClob
-				name = os.DevNull
-			}
-		default:
-			xs, err := r.File.ToStrings()
-			if err != nil {
-				return err
-			}
-			if len(xs) > 1 {
-				return errExpected{
-					want: "filename",
-					got:  fmt.Sprintf("%d filesnames", len(xs)),
-				}
-			}
-			name = xs[0]
-		}
-
-		switch r.Type {
-		case RedirAppend:
-			fp, err := os.OpenFile(name, appendFlags, 0666)
-			if err != nil {
-				return errInternal{err}
-			}
-			defer fp.Close()
-			c.Stdout = fp
-		case RedirClob:
-			fp, err := os.Create(name)
-			if err != nil {
-				return errInternal{err}
-			}
-			defer fp.Close()
-			c.Stdout = fp
-		case RedirRead:
-			fp, err := os.Open(name)
-			if err != nil {
-				return errInternal{err}
-			}
-			defer fp.Close()
-			c.Stdin = fp
-		case RedirWrite:
-			_, err := os.Stat(name)
-			switch {
-			case errors.Is(err, os.ErrNotExist):
-				fp, err := os.Create(name)
-				if err != nil {
-					return errInternal{err}
-				}
-				defer fp.Close()
-				c.Stdout = fp
-			case err != nil:
-				return errFileOp{"stat", name, err}
-			default: // File exists
-				return errClobber{name}
-			}
-		default:
-			panic("unreachable")
-		}
-	}
 
 	if f, ok := builtin.Commands[c.Args[0]]; ok {
 		return errExitCode(f(c))
