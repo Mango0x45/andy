@@ -64,13 +64,14 @@ type Compound struct {
 
 // If is a conditional branch; it executes Body if Cond was successful
 type If struct {
-	Cond, Body   CommandList
-	Else         *CommandList
+	Cond         CommandList
+	Body, Else   []CommandList
 	in, out, err *os.File
 }
 
 type While struct {
-	Cond, Body   CommandList
+	Cond         CommandList
+	Body         []CommandList
 	in, out, err *os.File
 }
 

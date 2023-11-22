@@ -96,28 +96,62 @@ func (p *Parser) parseCommand() vm.Command {
 }
 
 func (p *Parser) parseWhile() *vm.While {
-	return &vm.While{
-		Cond: p.parseCommandList(),
-		Body: p.parseCommandList(),
+	w := vm.While{}
+	w.Cond = p.parseCommandList()
+	if t := p.next(); t.Kind != lexer.TokBcOpen {
+		die(errExpected{"opening brace", t})
 	}
+	w.Body = p.parseBody()
+	p.next() // Consume ‘}’
+	return &w
 }
 
 func (p *Parser) parseIf() *vm.If {
-	if_ := vm.If{
-		Cond: p.parseCommandList(),
-		Body: p.parseCommandList(),
-	}
+	cond := vm.If{}
+	cond.Cond = p.parseCommandList()
 
-	if t := p.peek(); t.Kind == lexer.TokArg && t.Val == "else" {
-		p.next()
-		for p.peek().Kind == lexer.TokEndStmt {
-			p.next()
+	if t := p.next(); t.Kind != lexer.TokBcOpen {
+		die(errExpected{"opening brace", t})
+	}
+	cond.Body = p.parseBody()
+	p.next() // Consume ‘}’
+
+	if t := p.peek(); t.Kind != lexer.TokArg || t.Val != "else" {
+		goto out
+	}
+	p.next() // Consume ‘else’
+	if t := p.peek(); t.Kind == lexer.TokArg && t.Val == "if" {
+		p.next() // Consume ‘if’
+		cond.Else = append(cond.Else, vm.CommandList{
+			Rhs: vm.Pipeline{p.parseIf()},
+		})
+	} else {
+		if t := p.next(); t.Kind != lexer.TokBcOpen {
+			die(errExpected{"opening brace", t})
 		}
-		cl := p.parseCommandList()
-		if_.Else = &cl
+		cond.Else = p.parseBody()
+		p.next() // Consume ‘}’
 	}
 
-	return &if_
+out:
+	return &cond
+}
+
+func (p *Parser) parseBody() []vm.CommandList {
+	xs := []vm.CommandList{}
+
+	for {
+		switch t := p.peek(); t.Kind {
+		case lexer.TokEndStmt:
+			p.next()
+		case lexer.TokBcClose:
+			return xs
+		case lexer.TokEof:
+			die(errExpected{"closing brace", t})
+		default:
+			xs = append(xs, p.parseCommandList())
+		}
+	}
 }
 
 func (p *Parser) parseCompound() *vm.Compound {

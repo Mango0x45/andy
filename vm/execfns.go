@@ -112,8 +112,10 @@ func (vm *Vm) execWhile(cmd *While) commandResult {
 			return errExitCode(0)
 		}
 
-		if res := vm.execCmdList(cmd.Body, ctx); res.ExitCode() != 0 {
-			return res
+		for _, cl := range cmd.Body {
+			if res := vm.execCmdList(cl, ctx); res.ExitCode() != 0 {
+				return res
+			}
 		}
 	}
 }
@@ -121,13 +123,21 @@ func (vm *Vm) execWhile(cmd *While) commandResult {
 func (vm *Vm) execIf(cmd *If) commandResult {
 	ctx := context{cmd.In(), cmd.Out(), cmd.Err()}
 	res := vm.execCmdList(cmd.Cond, ctx)
-	switch ec, ok := res.(errExitCode); {
-	case !ok:
+	ec, ok := res.(errExitCode)
+	if !ok {
 		return res
-	case ec == 0:
-		return vm.execCmdList(cmd.Body, ctx)
-	case cmd.Else != nil:
-		return vm.execCmdList(*cmd.Else, ctx)
+	}
+
+	var cmds []CommandList
+	if ec == 0 {
+		cmds = cmd.Body
+	} else {
+		cmds = cmd.Else
+	}
+	for _, cl := range cmds {
+		if res := vm.execCmdList(cl, ctx); res.ExitCode() != 0 {
+			return res
+		}
 	}
 	return errExitCode(0)
 }
