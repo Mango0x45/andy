@@ -81,18 +81,44 @@ func (p *Parser) parsePipeline() vm.Pipeline {
 }
 
 func (p *Parser) parseCommand() vm.Command {
+	var cmd vm.Command
+
 	switch t := p.peek(); {
 	case t.Kind == lexer.TokArg && t.Val == "if":
 		p.next()
-		return p.parseIf()
+		cmd = p.parseIf()
 	case t.Kind == lexer.TokArg && t.Val == "while":
 		p.next()
-		return p.parseWhile()
+		cmd = p.parseWhile()
 	case t.Kind == lexer.TokBcOpen:
 		p.next()
-		return p.parseCompound()
+		cmd = p.parseCompound()
+	default:
+		cmd = p.parseSimple()
 	}
-	return p.parseSimple()
+
+	redirs := []vm.Redirect{}
+	for {
+		switch t := p.peek(); {
+		case vm.IsRedir(t.Kind):
+			p.next()
+			r := vm.NewRedir(t.Kind)
+
+			switch {
+			case vm.IsValue(p.peek().Kind):
+				r.File = p.parseValue()
+			default:
+				die(errExpected{"file after redirect", t})
+			}
+
+			redirs = append(redirs, r)
+		case vm.IsValue(t.Kind):
+			die(errExpected{"semicolon or newline", t})
+		default:
+			cmd.SetRedirs(redirs)
+			return cmd
+		}
+	}
 }
 
 func (p *Parser) parseWhile() *vm.While {
@@ -174,36 +200,13 @@ func (p *Parser) parseCompound() *vm.Compound {
 
 func (p *Parser) parseSimple() *vm.Simple {
 	args := make([]vm.Value, 0, 4) // Add a little capacity
-	var redirs []vm.Redirect
 
 	args = append(args, p.parseValue())
 	for vm.IsValue(p.peek().Kind) {
 		args = append(args, p.parseValue())
 	}
 
-	for {
-		switch t := p.peek(); {
-		case vm.IsRedir(t.Kind):
-			p.next()
-			r := vm.NewRedir(t.Kind)
-
-			switch {
-			case vm.IsValue(p.peek().Kind):
-				r.File = p.parseValue()
-			default:
-				die(errExpected{"file after redirect", t})
-			}
-
-			redirs = append(redirs, r)
-		case vm.IsValue(t.Kind):
-			die(errExpected{"semicolon or newline", t})
-		default:
-			return &vm.Simple{
-				Args:   args,
-				Redirs: redirs,
-			}
-		}
-	}
+	return &vm.Simple{Args: args}
 }
 
 func (p *Parser) parseValue() vm.Value {

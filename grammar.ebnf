@@ -1,9 +1,9 @@
 program = {cmdlist};
 cmdlist = pipeline, {lop, pipeline}, end;
 pipeline = cmd, {'|', cmd};
-cmd = simple | compound | if | while;
+cmd = (simple | compound | if | while), {redir};
 
-simple = value, {value}, {redir};
+simple = value, {value};
 compound = '{', program, '}';
 if = 'if', cmdlist, '{', program, '}', [else];
 else = 'else', ('{', program, '}' | if);

@@ -170,7 +170,7 @@ func (vm *Vm) execSimple(cmd *Simple) commandResult {
 	c := exec.Command(args[0], args[1:]...)
 	c.Stdin, c.Stdout, c.Stderr = cmd.In(), cmd.Out(), cmd.Err()
 
-	for _, r := range cmd.Redirs {
+	for _, r := range cmd.redirs {
 		var name string
 		switch r.File.(type) {
 		case Argument:

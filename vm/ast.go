@@ -47,18 +47,22 @@ type Command interface {
 	SetIn(*os.File)
 	SetOut(*os.File)
 	SetErr(*os.File)
+
+	Redirs() []Redirect
+	SetRedirs([]Redirect)
 }
 
 // Simple is the simplest form of a command, just arguments and redirects
 type Simple struct {
 	Args         []Value
-	Redirs       []Redirect
+	redirs       []Redirect
 	in, out, err *os.File
 }
 
 // Compound is a code wrapped within braces
 type Compound struct {
 	Cmds         []CommandList
+	redirs       []Redirect
 	in, out, err *os.File
 }
 
@@ -66,6 +70,7 @@ type Compound struct {
 type If struct {
 	Cond         CommandList
 	Body, Else   []CommandList
+	redirs       []Redirect
 	in, out, err *os.File
 }
 
@@ -73,6 +78,7 @@ type If struct {
 type While struct {
 	Cond         CommandList
 	Body         []CommandList
+	redirs       []Redirect
 	in, out, err *os.File
 }
 
@@ -106,6 +112,16 @@ func (c *If) SetErr(f *os.File)       { c.err = f }
 func (c *While) SetIn(f *os.File)     { c.in = f }
 func (c *While) SetOut(f *os.File)    { c.out = f }
 func (c *While) SetErr(f *os.File)    { c.err = f }
+
+func (c *Simple) Redirs() []Redirect   { return c.redirs }
+func (c *Compound) Redirs() []Redirect { return c.redirs }
+func (c *If) Redirs() []Redirect       { return c.redirs }
+func (c *While) Redirs() []Redirect    { return c.redirs }
+
+func (c *Simple) SetRedirs(rs []Redirect)   { c.redirs = rs }
+func (c *Compound) SetRedirs(rs []Redirect) { c.redirs = rs }
+func (c *If) SetRedirs(rs []Redirect)       { c.redirs = rs }
+func (c *While) SetRedirs(rs []Redirect)    { c.redirs = rs }
 
 // Redirect is a redirection between files and file descriptors
 type Redirect struct {
