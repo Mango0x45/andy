@@ -1,15 +1,13 @@
-(* Anything between ‘??’ represents a regex.  Regex character classes are
-   unicode aware (‘\s’ matches all unicode spaces) *)
-
 program = {cmdlist};
 cmdlist = pipeline, {lop, pipeline}, end;
 pipeline = cmd, {'|', cmd};
 cmd = simple | compound | if | while;
 
 simple = value, {value}, {redir};
-compound = '{', cmdlist, {cmdlist}, '}';
-if = 'if', cmdlist, cmdlist, ['else', cmdlist];
-while = 'while', cmdlist;
+compound = '{', program, '}';
+if = 'if', cmdlist, '{', program, '}', [else];
+else = 'else', ('{', program, '}' | if);
+while = 'while', cmdlist, '{', program, '}';
 
 redir =
 	( '<'
@@ -17,9 +15,16 @@ redir =
 	| '>!'
 	| '>>'
 	), value;
-value = arg | string;
+value = arg | string | list;
 
-string = '"', ?[^"]*?, '"';
-arg = ?[^|><;\n\s]+?;
+arg = (* One of more non-whitespace and -metachar characters unless backslash
+         escaped *);
+
+string = sstring, dstring;
+sstring = (* /('+).+?\g1/ *);
+dstring = (* C-style string allowing escape sequences and variables *);
+
+list = '(', {value}, ')';
+
 lop = '&&' | '||';
 end = ';' | '\n';
