@@ -162,6 +162,11 @@ func (vm *Vm) execSimple(cmd *Simple) commandResult {
 		args = append(args, ss...)
 	}
 
+	// $ ()
+	if len(args) == 0 {
+		return errExitCode(0)
+	}
+
 	c := exec.Command(args[0], args[1:]...)
 	c.Stdin, c.Stdout, c.Stderr = cmd.In(), cmd.Out(), cmd.Err()
 
