@@ -5,6 +5,8 @@ import (
 	"math"
 )
 
+const shellExitCode = math.MaxUint8
+
 type commandResult interface {
 	error
 	ExitCode() uint8
@@ -17,7 +19,7 @@ type errFileOp struct {
 }
 
 func (e errFileOp) ExitCode() uint8 {
-	return math.MaxUint8
+	return shellExitCode
 }
 
 func (e errFileOp) Error() string {
@@ -29,7 +31,7 @@ type errClobber struct {
 }
 
 func (e errClobber) ExitCode() uint8 {
-	return math.MaxUint8
+	return shellExitCode
 }
 
 func (e errClobber) Error() string {
@@ -52,7 +54,7 @@ type errInternal struct {
 }
 
 func (e errInternal) ExitCode() uint8 {
-	return math.MaxUint8
+	return shellExitCode
 }
 
 func (e errInternal) Error() string {
@@ -64,7 +66,7 @@ type errExpected struct {
 }
 
 func (e errExpected) ExitCode() uint8 {
-	return math.MaxUint8
+	return shellExitCode
 }
 
 func (e errExpected) Error() string {
