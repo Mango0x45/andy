@@ -69,6 +69,7 @@ type If struct {
 	in, out, err *os.File
 }
 
+// While is a loop; it executes Body for as long as Cond is successful
 type While struct {
 	Cond         CommandList
 	Body         []CommandList
