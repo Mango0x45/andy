@@ -1,0 +1,16 @@
+set xs 1
+while test $#xs -le 5 {
+	echo "Loop $#xs"
+	set xs $xs 1
+}
+
+while false { echo unreachable }
+
+while { if [ $#xs -eq 6 ] { true } else { false } } {
+	echo "|\$xs| ≣ 6"
+	set xs
+}
+
+while { echo foo; echo bar; } && test $#xs -lt 2 {
+	set xs $xs 1
+}

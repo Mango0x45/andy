@@ -140,3 +140,10 @@ func TestConditional(t *testing.T) {
 		"x ∉ {1, 2, 3}\n"
 	runAndCapture(t, "conditional", s, "")
 }
+
+func TestLoop(t *testing.T) {
+	s := "Loop 1\nLoop 2\nLoop 3\nLoop 4\nLoop 5\n" +
+		"|$xs| ≣ 6\n" +
+		"foo\nbar\nfoo\nbar\nfoo\nbar\n"
+	runAndCapture(t, "loop", s, "")
+}
