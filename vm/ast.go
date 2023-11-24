@@ -157,28 +157,17 @@ type Value interface {
 	ToStrings() ([]string, commandResult)
 }
 
-func NewValue(t lexer.Token) Value {
-	switch t.Kind {
-	case lexer.TokArg:
-		return Argument(t.Val)
-	case lexer.TokString:
-		return String(t.Val)
-	}
-	panic("unreachable")
-}
-
 type Argument string
 
 func (a Argument) ToStrings() ([]string, commandResult) {
-	s, err := a.tildeExpand()
+	s, err := tildeExpand(string(a))
 	if err != nil {
 		return []string{}, errInternal{err}
 	}
 	return []string{s}, nil
 }
 
-func (a Argument) tildeExpand() (string, error) {
-	s := string(a)
+func tildeExpand(s string) (string, error) {
 	if len(s) == 0 || s[0] != '~' {
 		return s, nil
 	}
@@ -338,6 +327,14 @@ func (l List) ToStrings() ([]string, commandResult) {
 		xs = append(xs, ys...)
 	}
 	return xs, nil
+}
+
+type ProcRead struct {
+	Body []CommandList
+}
+
+func (pr ProcRead) ToStrings() ([]string, commandResult) {
+	panic("unused")
 }
 
 type BinaryOp int

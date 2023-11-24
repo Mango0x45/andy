@@ -5,12 +5,23 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
+	"slices"
 	"sync"
 
 	"git.sr.ht/~mango/andy/builtin"
 )
 
 const appendFlags = os.O_APPEND | os.O_CREATE | os.O_WRONLY
+
+func (vm *Vm) execCmdLists(cls []CommandList, ctx context) commandResult {
+	for _, cl := range cls {
+		res := vm.execCmdList(cl, ctx)
+		if res.ExitCode() != 0 {
+			return res
+		}
+	}
+	return errExitCode(0)
+}
 
 func (vm *Vm) execCmdList(cl CommandList, ctx context) commandResult {
 	if cl.Lhs == nil {
@@ -223,21 +234,54 @@ func (vm *Vm) execCompound(cmd *Compound) commandResult {
 
 func (vm *Vm) execSimple(cmd *Simple) commandResult {
 	args := make([]string, 0, cap(cmd.Args))
+	extras := []*os.File{}
+
 	for _, v := range cmd.Args {
-		ss, err := v.ToStrings()
-		if err != nil {
-			return err
+		switch v.(type) {
+		case ProcRead:
+			r, w, err := os.Pipe()
+			if err != nil {
+				return errInternal{err}
+			}
+			defer r.Close()
+			extras = append(extras, r)
+			ctx := context{nil, w, os.Stderr}
+			// TODO: go 1.22 fixed range loops
+			go func(pr ProcRead) {
+				res := vm.execCmdLists(pr.Body, ctx)
+				if res != nil {
+					panic("TODO")
+				}
+				w.Close()
+			}(v.(ProcRead))
+
+			args = append(args, fmt.Sprintf("/dev/fd/%d", r.Fd()))
+		default:
+			ss, err := v.ToStrings()
+			if err != nil {
+				return err
+			}
+			args = append(args, ss...)
 		}
-		args = append(args, ss...)
 	}
 
-	// $ ()
+	// You might try to run the empty list
 	if len(args) == 0 {
 		return errExitCode(0)
 	}
 
 	c := exec.Command(args[0], args[1:]...)
 	c.Stdin, c.Stdout, c.Stderr = cmd.In(), cmd.Out(), cmd.Err()
+
+	if len(extras) > 0 {
+		maxFd := slices.MaxFunc(extras, func(a, b *os.File) int {
+			return int(a.Fd() - b.Fd())
+		}).Fd()
+		c.ExtraFiles = make([]*os.File, maxFd)
+		for _, e := range extras {
+			c.ExtraFiles[e.Fd()-3] = e
+		}
+	}
 
 	if f, ok := builtin.Commands[c.Args[0]]; ok {
 		return errExitCode(f(c))

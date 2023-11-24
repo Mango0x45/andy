@@ -35,6 +35,11 @@ const (
 	TokBkClose // The closing bracket of a variable index
 	TokPOpen   // The opening parenthesis of a list
 	TokPClose  // The closing parenthesis of a list
+
+	TokProcSub   // The ‘`{’ of process substitution
+	TokProcRead  // The ‘<{’ of process substitution
+	TokProcWrite // The ‘>{’ of process substitution
+	TokProcRdWr  // The ‘<>{’ of process substitution
 )
 
 type Token struct {
@@ -99,6 +104,15 @@ func (t Token) String() string {
 		return "‘(’"
 	case TokPClose:
 		return "‘)’"
+
+	case TokProcSub:
+		return "‘`{’"
+	case TokProcRead:
+		return "‘<{’"
+	case TokProcWrite:
+		return "‘>{’"
+	case TokProcRdWr:
+		return "‘<>{’"
 	}
 
 	panic("unreachable")

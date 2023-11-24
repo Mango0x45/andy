@@ -128,7 +128,6 @@ func (p *Parser) parseWhile() *vm.While {
 		die(errExpected{"opening brace", t})
 	}
 	w.Body = p.parseBody()
-	p.next() // Consume ‘}’
 	return &w
 }
 
@@ -140,7 +139,6 @@ func (p *Parser) parseIf() *vm.If {
 		die(errExpected{"opening brace", t})
 	}
 	cond.Body = p.parseBody()
-	p.next() // Consume ‘}’
 
 	if t := p.peek(); t.Kind != lexer.TokArg || t.Val != "else" {
 		goto out
@@ -156,7 +154,6 @@ func (p *Parser) parseIf() *vm.If {
 			die(errExpected{"opening brace", t})
 		}
 		cond.Else = p.parseBody()
-		p.next() // Consume ‘}’
 	}
 
 out:
@@ -171,6 +168,7 @@ func (p *Parser) parseBody() []vm.CommandList {
 		case lexer.TokEndStmt:
 			p.next()
 		case lexer.TokBcClose:
+			p.next()
 			return xs
 		case lexer.TokEof:
 			die(errExpected{"closing brace", t})
@@ -213,8 +211,10 @@ func (p *Parser) parseValue() vm.Value {
 	var v vm.Value
 
 	switch t := p.next(); t.Kind {
-	case lexer.TokArg, lexer.TokString:
-		v = vm.NewValue(t)
+	case lexer.TokArg:
+		v = vm.Argument(t.Val)
+	case lexer.TokString:
+		v = vm.String(t.Val)
 	case lexer.TokVarRef, lexer.TokVarFlat, lexer.TokVarLen:
 		vr := vm.NewVarRef(t)
 		if p.peek().Kind == lexer.TokBkOpen {
@@ -223,6 +223,8 @@ func (p *Parser) parseValue() vm.Value {
 		v = vr
 	case lexer.TokPOpen:
 		v = p.parseList()
+	case lexer.TokProcRead:
+		v = vm.ProcRead{Body: p.parseBody()}
 	default:
 		die(errExpected{"value", t})
 	}
@@ -255,8 +257,10 @@ func (p *Parser) parseList() vm.List {
 		switch t := p.next(); t.Kind {
 		case lexer.TokPClose:
 			return xs
-		case lexer.TokArg, lexer.TokString:
-			xs = append(xs, vm.NewValue(t))
+		case lexer.TokArg:
+			xs = append(xs, vm.Argument(t.Val))
+		case lexer.TokString:
+			xs = append(xs, vm.String(t.Val))
 		case lexer.TokVarRef, lexer.TokVarFlat, lexer.TokVarLen:
 			xs = append(xs, vm.NewVarRef(t))
 		case lexer.TokPOpen:
