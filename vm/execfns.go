@@ -249,7 +249,7 @@ func (vm *Vm) execSimple(cmd *Simple) commandResult {
 			// TODO: go 1.22 fixed range loops
 			go func(pr ProcRead) {
 				res := vm.execCmdLists(pr.Body, ctx)
-				if res != nil {
+				if res.ExitCode() != 0 {
 					panic("TODO")
 				}
 				w.Close()
