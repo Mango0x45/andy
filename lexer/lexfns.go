@@ -39,8 +39,14 @@ func lexDefault(l *lexer) lexFn {
 			l.backup()
 			return lexStringDouble
 		case strings.HasPrefix(l.input[l.pos-l.width:], "<{"):
-			l.next()
+			l.pos += 1
 			l.emit(TokProcRead)
+		case strings.HasPrefix(l.input[l.pos-l.width:], ">{"):
+			l.pos += 1
+			l.emit(TokProcWrite)
+		case strings.HasPrefix(l.input[l.pos-l.width:], "<>{"):
+			l.pos += 2
+			l.emit(TokProcRdWr)
 		case r == '<':
 			l.emit(TokRead)
 		case r == '>':

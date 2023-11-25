@@ -37,7 +37,7 @@ a while.  The currently implemented features are:
 - [X] Flattening variables (`$^var`)
 - [X] Get variable length (`$#var`)
 - [X] Index into variables (`$var[1 1 -2 5]`)
-- [X] Process substitution (`<{…}`)
+- [X] Process substitution (`<{…}`, `>{…}`, `<>{…}`)
 
 ## Example
 

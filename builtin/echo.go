@@ -1,10 +1,8 @@
 package builtin
 
 import (
-	"errors"
 	"fmt"
 	"os/exec"
-	"syscall"
 )
 
 func echo(cmd *exec.Cmd) uint8 {
@@ -14,10 +12,6 @@ func echo(cmd *exec.Cmd) uint8 {
 		args[i] = cmd.Args[i+1]
 	}
 
-	_, err := fmt.Fprintln(cmd.Stdout, args...)
-	if err != nil && !errors.Is(err, syscall.EPIPE) {
-		errorf(cmd, "%s", err)
-		return 1
-	}
+	fmt.Fprintln(cmd.Stdout, args...)
 	return 0
 }

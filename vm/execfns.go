@@ -170,7 +170,7 @@ func (vm *Vm) execCommand(cmd Command, ctx context) commandResult {
 
 	switch cmd.(type) {
 	case *Simple:
-		return vm.execSimple(cmd.(*Simple))
+		return vm.execSimple(cmd.(*Simple), ctx)
 	case *Compound:
 		return vm.execCompound(cmd.(*Compound))
 	case *If:
@@ -232,30 +232,46 @@ func (vm *Vm) execCompound(cmd *Compound) commandResult {
 	return errExitCode(0)
 }
 
-func (vm *Vm) execSimple(cmd *Simple) commandResult {
+func (vm *Vm) execSimple(cmd *Simple, ctx context) commandResult {
 	args := make([]string, 0, cap(cmd.Args))
 	extras := []*os.File{}
 
 	for _, v := range cmd.Args {
 		switch v.(type) {
-		case ProcRead:
+		case ProcRedir:
+			pr := v.(ProcRedir)
 			r, w, err := os.Pipe()
 			if err != nil {
 				return errInternal{err}
 			}
-			defer r.Close()
-			extras = append(extras, r)
-			ctx := context{nil, w, os.Stderr}
+
+			ctx := ctx
+			if pr.Is(ProcRead) {
+				ctx.out = w
+				extras = append(extras, r)
+				args = append(args, devFd(r))
+				defer r.Close()
+			}
+			if pr.Is(ProcWrite) {
+				ctx.in = r
+				extras = append(extras, w)
+				args = append(args, devFd(w))
+				defer w.Close()
+			}
+
 			// TODO: go 1.22 fixed range loops
-			go func(pr ProcRead) {
+			go func(pr ProcRedir) {
 				res := vm.execCmdLists(pr.Body, ctx)
 				if res.ExitCode() != 0 {
 					panic("TODO")
 				}
-				w.Close()
-			}(v.(ProcRead))
-
-			args = append(args, fmt.Sprintf("/dev/fd/%d", r.Fd()))
+				if pr.Is(ProcRead) {
+					w.Close()
+				}
+				if pr.Is(ProcWrite) {
+					r.Close()
+				}
+			}(pr)
 		default:
 			ss, err := v.ToStrings()
 			if err != nil {
@@ -294,4 +310,8 @@ func (vm *Vm) execSimple(cmd *Simple) commandResult {
 	default:
 		return errInternal{err}
 	}
+}
+
+func devFd(f *os.File) string {
+	return fmt.Sprintf("/dev/fd/%d", f.Fd())
 }

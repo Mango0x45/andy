@@ -13,7 +13,9 @@ func IsValue(kind lexer.TokenType) bool {
 	return kind == lexer.TokArg ||
 		kind == lexer.TokConcat ||
 		kind == lexer.TokPOpen ||
+		kind == lexer.TokProcRdWr ||
 		kind == lexer.TokProcRead ||
+		kind == lexer.TokProcWrite ||
 		kind == lexer.TokString ||
 		kind == lexer.TokVarFlat ||
 		kind == lexer.TokVarLen ||

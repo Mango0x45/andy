@@ -329,13 +329,25 @@ func (l List) ToStrings() ([]string, commandResult) {
 	return xs, nil
 }
 
-type ProcRead struct {
+type ProcRedir struct {
+	Type ProcRedirType
 	Body []CommandList
 }
 
-func (pr ProcRead) ToStrings() ([]string, commandResult) {
+func (pr ProcRedir) ToStrings() ([]string, commandResult) {
 	panic("unused")
 }
+
+func (pr ProcRedir) Is(t ProcRedirType) bool {
+	return pr.Type&t != 0
+}
+
+type ProcRedirType int
+
+const (
+	ProcRead ProcRedirType = 1 << iota
+	ProcWrite
+)
 
 type BinaryOp int
 
