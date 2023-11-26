@@ -100,19 +100,19 @@ func (p *Parser) parseCommand() vm.Command {
 	redirs := []vm.Redirect{}
 	for {
 		switch t := p.peek(); {
-		case vm.IsRedir(t.Kind):
+		case lexer.IsRedir(t.Kind):
 			p.next()
 			r := vm.NewRedir(t.Kind)
 
 			switch {
-			case vm.IsValue(p.peek().Kind):
+			case lexer.IsValue(p.peek().Kind):
 				r.File = p.parseValue()
 			default:
 				die(errExpected{"file after redirect", t})
 			}
 
 			redirs = append(redirs, r)
-		case vm.IsValue(t.Kind):
+		case lexer.IsValue(t.Kind):
 			die(errExpected{"semicolon or newline", t})
 		default:
 			cmd.SetRedirs(redirs)
@@ -200,7 +200,7 @@ func (p *Parser) parseSimple() *vm.Simple {
 	args := make([]vm.Value, 0, 4) // Add a little capacity
 
 	args = append(args, p.parseValue())
-	for vm.IsValue(p.peek().Kind) {
+	for lexer.IsValue(p.peek().Kind) {
 		args = append(args, p.parseValue())
 	}
 
@@ -247,7 +247,7 @@ func (p *Parser) parseValue() vm.Value {
 func (p *Parser) parseIndices() []vm.Value {
 	p.next() // Consume ‘[’
 	xs := []vm.Value{}
-	for vm.IsValue(p.peek().Kind) {
+	for lexer.IsValue(p.peek().Kind) {
 		xs = append(xs, p.parseValue())
 	}
 	if p.peek().Kind != lexer.TokBkClose {

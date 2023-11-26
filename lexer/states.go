@@ -23,7 +23,7 @@ type lexFn func(*lexer) lexFn
 func lexDefault(l *lexer) lexFn {
 	for {
 		switch r := l.next(); {
-		case isEol(r):
+		case IsEol(r):
 			l.emit(TokEndStmt)
 		case r == eof:
 			l.emit(TokEof)
@@ -114,7 +114,7 @@ func lexArg(l *lexer) lexFn {
 	for {
 		switch r := l.next(); {
 		case r == '\\':
-			if r := l.next(); unicode.IsSpace(r) || isMetaChar(r) {
+			if r := l.next(); unicode.IsSpace(r) || IsMetaChar(r) {
 				sb.WriteRune(r)
 			} else if r, ok := backslashEsc[r]; ok {
 				sb.WriteRune(r)
@@ -125,7 +125,7 @@ func lexArg(l *lexer) lexFn {
 			l.backup()
 			l.Out <- Token{TokArg, sb.String()}
 			return lexDefault
-		case unicode.IsSpace(r) || isMetaChar(r) || isEol(r) || r == eof:
+		case unicode.IsSpace(r) || IsMetaChar(r) || IsEol(r) || r == eof:
 			l.backup()
 			l.Out <- Token{TokArg, sb.String()}
 			return lexMaybeConcat
@@ -253,7 +253,7 @@ func lexMaybeConcat(l *lexer) lexFn {
 	case r == '$':
 		l.emit(TokConcat)
 		return lexVarRef
-	case unicode.IsSpace(r) || isMetaChar(r) || isEol(r) || r == eof:
+	case unicode.IsSpace(r) || IsMetaChar(r) || IsEol(r) || r == eof:
 		return lexDefault
 	}
 	l.emit(TokConcat)
