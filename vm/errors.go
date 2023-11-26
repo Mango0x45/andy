@@ -56,7 +56,7 @@ func (e errExpected) Error() string {
 type errUnsupported string
 
 func (e errUnsupported) Error() string {
-	return string(e)
+	return fmt.Sprintf("Attempt to %s is unsupported", string(e))
 }
 
 func (e errClobber) ExitCode() uint8     { return cmdFailCode }

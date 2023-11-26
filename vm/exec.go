@@ -99,21 +99,21 @@ func (vm *Vm) execCommand(cmd Command, ctx context) commandResult {
 		defer cmd.Err().Close()
 	}
 
-	for _, r := range cmd.Redirs() {
+	for _, re := range cmd.Redirs() {
 		var name string
-		switch r.File.(type) {
+		switch re.File.(type) {
 		case Argument:
-			name = string(r.File.(Argument))
+			name = string(re.File.(Argument))
 
 			switch {
-			case r.Type == RedirRead && name == "_":
+			case re.Type == RedirRead && name == "_":
 				name = os.DevNull
-			case r.Type == RedirWrite && name == "_":
-				r.Type = RedirClob
+			case re.Type == RedirWrite && name == "_":
+				re.Type = RedirClob
 				name = os.DevNull
 			}
 		case ProcRedir:
-			pr := r.File.(ProcRedir)
+			pr := re.File.(ProcRedir)
 			r, w, err := os.Pipe()
 			if err != nil {
 				return errInternal{err}
@@ -121,7 +121,14 @@ func (vm *Vm) execCommand(cmd Command, ctx context) commandResult {
 
 			ctx := ctx
 			if pr.Is(ProcRead) && pr.Is(ProcWrite) {
-				return errUnsupported("redirect to read+write process substitution")
+				var preposition string
+				if re.Type == RedirRead {
+					preposition = "from"
+				} else {
+					preposition = "to"
+				}
+				s := fmt.Sprintf("redirect %s read+write process substitution", preposition)
+				return errUnsupported(s)
 			}
 			if pr.Is(ProcRead) {
 				ctx.out = w
@@ -147,7 +154,7 @@ func (vm *Vm) execCommand(cmd Command, ctx context) commandResult {
 				}
 			}(pr)
 		default:
-			xs, err := r.File.ToStrings()
+			xs, err := re.File.ToStrings()
 			if err != nil {
 				return err
 			}
@@ -160,7 +167,7 @@ func (vm *Vm) execCommand(cmd Command, ctx context) commandResult {
 			name = xs[0]
 		}
 
-		switch r.Type {
+		switch re.Type {
 		case RedirAppend:
 			fp, err := os.OpenFile(name, appendFlags, 0666)
 			if err != nil {
