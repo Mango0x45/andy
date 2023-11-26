@@ -231,18 +231,10 @@ func getIndex(s string, n int) (int, commandResult) {
 	}
 
 	if i < 0 {
-		i += n
-	} else {
-		i--
-	}
-
-	if i == -1 {
-		str := "index ‘0’ is always invalid; did you mean ‘1’?"
-		return 0, errInternal{errors.New(str)}
+		i = n + i
 	}
 	if i < 0 || i >= n {
-		str := fmt.Sprintf("invalid index ‘%s’ into list of length %d",
-			s, n)
+		str := fmt.Sprintf("invalid index ‘%s’ into list of length %d", s, n)
 		return 0, errInternal{errors.New(str)}
 	}
 
