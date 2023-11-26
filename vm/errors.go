@@ -5,7 +5,7 @@ import (
 	"math"
 )
 
-const shellExitCode = math.MaxUint8
+const cmdFailCode = math.MaxUint8
 
 type commandResult interface {
 	error
@@ -18,20 +18,12 @@ type errFileOp struct {
 	err  error  // Error that caused this
 }
 
-func (e errFileOp) ExitCode() uint8 {
-	return shellExitCode
-}
-
 func (e errFileOp) Error() string {
 	return fmt.Sprintf("Failed to %s file ‘%s’: %s", e.desc, e.file, e.err)
 }
 
 type errClobber struct {
 	file string // File related to the error
-}
-
-func (e errClobber) ExitCode() uint8 {
-	return shellExitCode
 }
 
 func (e errClobber) Error() string {
@@ -41,20 +33,12 @@ func (e errClobber) Error() string {
 
 type errExitCode uint8
 
-func (e errExitCode) ExitCode() uint8 {
-	return uint8(e)
-}
-
 func (_ errExitCode) Error() string {
 	return ""
 }
 
 type errInternal struct {
 	e error
-}
-
-func (e errInternal) ExitCode() uint8 {
-	return shellExitCode
 }
 
 func (e errInternal) Error() string {
@@ -65,19 +49,29 @@ type errExpected struct {
 	want, got string
 }
 
-func (e errExpected) ExitCode() uint8 {
-	return shellExitCode
-}
-
 func (e errExpected) Error() string {
 	return fmt.Sprintf("Expected %s but got %s", e.want, e.got)
 }
+
+type errUnsupported string
+
+func (e errUnsupported) Error() string {
+	return string(e)
+}
+
+func (e errClobber) ExitCode() uint8     { return cmdFailCode }
+func (e errExpected) ExitCode() uint8    { return cmdFailCode }
+func (e errFileOp) ExitCode() uint8      { return cmdFailCode }
+func (e errInternal) ExitCode() uint8    { return cmdFailCode }
+func (e errUnsupported) ExitCode() uint8 { return cmdFailCode }
+func (e errExitCode) ExitCode() uint8    { return uint8(e) }
 
 type shellError interface {
 	isShellError()
 }
 
-func (_ errClobber) isShellError()  {}
-func (_ errFileOp) isShellError()   {}
-func (_ errInternal) isShellError() {}
-func (_ errExpected) isShellError() {}
+func (_ errClobber) isShellError()     {}
+func (_ errExpected) isShellError()    {}
+func (_ errFileOp) isShellError()      {}
+func (_ errInternal) isShellError()    {}
+func (_ errUnsupported) isShellError() {}

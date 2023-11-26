@@ -112,6 +112,40 @@ func (vm *Vm) execCommand(cmd Command, ctx context) commandResult {
 				r.Type = RedirClob
 				name = os.DevNull
 			}
+		case ProcRedir:
+			pr := r.File.(ProcRedir)
+			r, w, err := os.Pipe()
+			if err != nil {
+				return errInternal{err}
+			}
+
+			ctx := ctx
+			if pr.Is(ProcRead) && pr.Is(ProcWrite) {
+				return errUnsupported("redirect to read+write process substitution")
+			}
+			if pr.Is(ProcRead) {
+				ctx.out = w
+				name = devFd(w)
+				defer r.Close()
+			} else {
+				ctx.in = r
+				name = devFd(r)
+				defer w.Close()
+			}
+
+			// TODO: go 1.22 fixed range loops
+			go func(pr ProcRedir) {
+				res := vm.execCmdLists(pr.Body, ctx)
+				if res.ExitCode() != 0 {
+					panic("TODO")
+				}
+				if pr.Is(ProcRead) {
+					w.Close()
+				}
+				if pr.Is(ProcWrite) {
+					r.Close()
+				}
+			}(pr)
 		default:
 			xs, err := r.File.ToStrings()
 			if err != nil {
