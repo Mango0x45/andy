@@ -224,11 +224,11 @@ func (p *Parser) parseValue() vm.Value {
 	case lexer.TokPOpen:
 		v = p.parseList()
 	case lexer.TokProcRead:
-		v = vm.ProcRedir{Type: vm.ProcRead, Body: p.parseBody()}
+		v = &vm.ProcRedir{Type: vm.ProcRead, Body: p.parseBody()}
 	case lexer.TokProcWrite:
-		v = vm.ProcRedir{Type: vm.ProcWrite, Body: p.parseBody()}
+		v = &vm.ProcRedir{Type: vm.ProcWrite, Body: p.parseBody()}
 	case lexer.TokProcRdWr:
-		v = vm.ProcRedir{
+		v = &vm.ProcRedir{
 			Type: vm.ProcRead | vm.ProcWrite,
 			Body: p.parseBody(),
 		}

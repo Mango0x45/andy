@@ -1,6 +1,7 @@
 package vm
 
 import (
+	"bytes"
 	"errors"
 	"fmt"
 	"io"
@@ -8,6 +9,7 @@ import (
 	"os/user"
 	"strconv"
 	"strings"
+	"unicode"
 
 	"git.sr.ht/~mango/andy/builtin"
 	"git.sr.ht/~mango/andy/lexer"
@@ -159,12 +161,12 @@ func NewRedir(k lexer.TokenType) Redirect {
 
 // Value is anything that can be turned into a (list of) string(s)
 type Value interface {
-	ToStrings() ([]string, commandResult)
+	ToStrings(ctx context) ([]string, commandResult)
 }
 
 type Argument string
 
-func (a Argument) ToStrings() ([]string, commandResult) {
+func (a Argument) ToStrings(_ context) ([]string, commandResult) {
 	s, err := tildeExpand(string(a))
 	if err != nil {
 		return []string{}, errInternal{err}
@@ -202,7 +204,7 @@ func tildeExpand(s string) (string, error) {
 
 type String string
 
-func (s String) ToStrings() ([]string, commandResult) {
+func (s String) ToStrings(_ context) ([]string, commandResult) {
 	return []string{string(s)}, nil
 }
 
@@ -246,13 +248,13 @@ func getIndex(s string, n int) (int, commandResult) {
 	return i, nil
 }
 
-func (vr VarRef) ToStrings() ([]string, commandResult) {
+func (vr VarRef) ToStrings(ctx context) ([]string, commandResult) {
 	xs, _ := builtin.VarTable[vr.Ident]
 
 	if vr.Indices != nil {
 		ys := make([]string, 0, len(xs))
 		for _, i := range vr.Indices {
-			ss, err := i.ToStrings()
+			ss, err := i.ToStrings(ctx)
 			if err != nil {
 				return nil, err
 			}
@@ -292,12 +294,12 @@ type Concat struct {
 	Lhs, Rhs Value
 }
 
-func (c Concat) ToStrings() ([]string, commandResult) {
-	xs, err := c.Lhs.ToStrings()
+func (c Concat) ToStrings(ctx context) ([]string, commandResult) {
+	xs, err := c.Lhs.ToStrings(ctx)
 	if err != nil {
 		return []string{}, err
 	}
-	ys, err := c.Rhs.ToStrings()
+	ys, err := c.Rhs.ToStrings(ctx)
 	if err != nil {
 		return []string{}, err
 	}
@@ -314,10 +316,10 @@ func (c Concat) ToStrings() ([]string, commandResult) {
 
 type List []Value
 
-func (l List) ToStrings() ([]string, commandResult) {
+func (l List) ToStrings(ctx context) ([]string, commandResult) {
 	xs := make([]string, 0, len(l))
 	for _, x := range l {
-		ys, err := x.ToStrings()
+		ys, err := x.ToStrings(ctx)
 		if err != nil {
 			return []string{}, err
 		}
@@ -330,17 +332,79 @@ type ProcSub struct {
 	Body []CommandList
 }
 
-func (ps ProcSub) ToStrings() ([]string, commandResult) {
-	panic("unused")
+func (ps ProcSub) ToStrings(ctx context) ([]string, commandResult) {
+	var out bytes.Buffer
+	ctx.out = &out
+
+	if res := execCmdLists(ps.Body, ctx); res.ExitCode() != 0 {
+		return nil, res
+	}
+
+	s := strings.TrimRightFunc(out.String(), unicode.IsSpace)
+	return []string{s}, nil
 }
 
 type ProcRedir struct {
 	Type ProcRedirType
 	Body []CommandList
+	r, w *os.File
 }
 
-func (pr ProcRedir) ToStrings() ([]string, commandResult) {
-	panic("unused")
+func (pr *ProcRedir) ToStrings(ctx context) ([]string, commandResult) {
+	xs := make([]string, 0, 2)
+	r, w, err := os.Pipe()
+	if err != nil {
+		return []string{}, errInternal{err}
+	}
+	pr.r = r
+	pr.w = w
+
+	if pr.Is(ProcRead) {
+		ctx.out = w
+		xs = append(xs, devFd(r))
+	}
+	if pr.Is(ProcWrite) {
+		ctx.in = r
+		xs = append(xs, devFd(w))
+	}
+
+	go func() {
+		if res := execCmdLists(pr.Body, ctx); failed(res) {
+			panic("TODO")
+		}
+		if pr.Is(ProcRead) {
+			w.Close()
+		}
+		if pr.Is(ProcWrite) {
+			r.Close()
+		}
+	}()
+
+	return xs, nil
+}
+
+func (pr ProcRedir) Close() {
+	if pr.Is(ProcRead) {
+		pr.r.Close()
+	}
+	if pr.Is(ProcWrite) {
+		pr.w.Close()
+	}
+}
+
+func (pr ProcRedir) OpenFiles() []*os.File {
+	var xs []*os.File
+	if pr.Is(ProcRead) {
+		xs = append(xs, pr.r)
+	}
+	if pr.Is(ProcWrite) {
+		xs = append(xs, pr.w)
+	}
+	return xs
+}
+
+func devFd(f *os.File) string {
+	return fmt.Sprintf("/dev/fd/%d", f.Fd())
 }
 
 func (pr ProcRedir) Is(t ProcRedirType) bool {

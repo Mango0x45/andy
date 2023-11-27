@@ -75,3 +75,7 @@ func (_ errExpected) isShellError()    {}
 func (_ errFileOp) isShellError()      {}
 func (_ errInternal) isShellError()    {}
 func (_ errUnsupported) isShellError() {}
+
+func failed(e commandResult) bool {
+	return e.ExitCode() != 0
+}
