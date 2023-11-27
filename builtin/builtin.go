@@ -11,6 +11,7 @@ var Commands = map[string]builtin{
 	"cd":    cd,
 	"echo":  echo,
 	"false": false_,
+	"read":  read,
 	"set":   set,
 	"true":  true_,
 }

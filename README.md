@@ -38,6 +38,7 @@ a while.  The currently implemented features are:
 - [X] Get variable length (`$#var`)
 - [X] Index into variables (`$var[1 1 -2 5]`)
 - [X] Process substitution (``​`{…}``, `<{…}`, `>{…}`, `<>{…}`)
+- [X] Read stdin into array (`cmd | read var`)
 
 ## Example
 

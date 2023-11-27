@@ -25,10 +25,6 @@ func set(cmd *exec.Cmd) uint8 {
 	}
 
 	if argc == 2 {
-		if _, ok := VarTable[ident]; !ok {
-			errorf(cmd, "variable ‘%s’ was already unset", ident)
-			return 1
-		}
 		delete(VarTable, ident)
 	} else {
 		VarTable[ident] = cmd.Args[2:]
