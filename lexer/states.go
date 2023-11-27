@@ -1,13 +1,14 @@
 package lexer
 
 import (
+	"errors"
+	"fmt"
 	"strings"
 	"unicode"
 )
 
-var backslashEsc = map[rune]rune{
+var escapes = map[rune]rune{
 	'\\': '\\',
-	'$':  '$',
 	'0':  '\000',
 	'a':  '\a',
 	'b':  '\b',
@@ -119,13 +120,11 @@ func lexArg(l *lexer) lexFn {
 	for {
 		switch r := l.next(); {
 		case r == '\\':
-			if r := l.next(); unicode.IsSpace(r) || IsMetaChar(r) {
-				sb.WriteRune(r)
-			} else if r, ok := backslashEsc[r]; ok {
-				sb.WriteRune(r)
-			} else {
-				return l.errorf("invalid escape sequence ‘\\%c’", r)
+			r, err := escape(l.next())
+			if err != nil {
+				l.errorf("%s", err)
 			}
+			sb.WriteRune(r)
 		case r == ']' && l.brktDepth > 0:
 			l.backup()
 			l.Out <- Token{TokArg, sb.String()}
@@ -226,9 +225,9 @@ func lexStringDouble(l *lexer) lexFn {
 		case eof:
 			return l.errorf("unterminated string")
 		case '\\':
-			r, ok := backslashEsc[l.next()]
-			if !ok {
-				return l.errorf("invalid escape sequence ‘\\%c’", r)
+			r, err := escape(l.next())
+			if err != nil {
+				l.errorf("%s", err)
 			}
 			sb.WriteRune(r)
 		case '$':
@@ -277,4 +276,13 @@ func lexWrite(l *lexer) lexFn {
 		l.emit(TokWrite)
 	}
 	return lexDefault
+}
+
+func escape(r rune) (rune, error) {
+	if unicode.IsSpace(r) || IsMetaChar(r) {
+		return r, nil
+	} else if r, ok := escapes[r]; ok {
+		return r, nil
+	}
+	return -1, errors.New(fmt.Sprintf("invalid escape sequence ‘\\%c’", r))
 }
