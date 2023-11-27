@@ -43,6 +43,7 @@ func IsValue(kind TokenType) bool {
 		kind == TokPOpen ||
 		kind == TokProcRdWr ||
 		kind == TokProcRead ||
+		kind == TokProcSub ||
 		kind == TokProcWrite ||
 		kind == TokString ||
 		kind == TokVarFlat ||

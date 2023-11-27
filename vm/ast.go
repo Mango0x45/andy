@@ -3,6 +3,7 @@ package vm
 import (
 	"errors"
 	"fmt"
+	"io"
 	"os"
 	"os/user"
 	"strconv"
@@ -40,13 +41,13 @@ type Pipeline []Command
 type Command interface {
 	isCommand()
 
-	In() *os.File
-	Out() *os.File
-	Err() *os.File
+	In() io.Reader
+	Out() io.Writer
+	Err() io.Writer
 
-	SetIn(*os.File)
-	SetOut(*os.File)
-	SetErr(*os.File)
+	SetIn(io.Reader)
+	SetOut(io.Writer)
+	SetErr(io.Writer)
 
 	Redirs() []Redirect
 	SetRedirs([]Redirect)
@@ -54,32 +55,36 @@ type Command interface {
 
 // Simple is the simplest form of a command, just arguments and redirects
 type Simple struct {
-	Args         []Value
-	redirs       []Redirect
-	in, out, err *os.File
+	Args     []Value
+	redirs   []Redirect
+	in       io.Reader
+	out, err io.Writer
 }
 
 // Compound is a code wrapped within braces
 type Compound struct {
-	Cmds         []CommandList
-	redirs       []Redirect
-	in, out, err *os.File
+	Cmds     []CommandList
+	redirs   []Redirect
+	in       io.Reader
+	out, err io.Writer
 }
 
 // If is a conditional branch; it executes Body if Cond was successful
 type If struct {
-	Cond         CommandList
-	Body, Else   []CommandList
-	redirs       []Redirect
-	in, out, err *os.File
+	Cond       CommandList
+	Body, Else []CommandList
+	redirs     []Redirect
+	in         io.Reader
+	out, err   io.Writer
 }
 
 // While is a loop; it executes Body for as long as Cond is successful
 type While struct {
-	Cond         CommandList
-	Body         []CommandList
-	redirs       []Redirect
-	in, out, err *os.File
+	Cond     CommandList
+	Body     []CommandList
+	redirs   []Redirect
+	in       io.Reader
+	out, err io.Writer
 }
 
 func (_ Simple) isCommand()   {}
@@ -87,31 +92,31 @@ func (_ Compound) isCommand() {}
 func (_ If) isCommand()       {}
 func (_ While) isCommand()    {}
 
-func (c Simple) In() *os.File    { return c.in }
-func (c Simple) Out() *os.File   { return c.out }
-func (c Simple) Err() *os.File   { return c.err }
-func (c Compound) In() *os.File  { return c.in }
-func (c Compound) Out() *os.File { return c.out }
-func (c Compound) Err() *os.File { return c.err }
-func (c If) In() *os.File        { return c.in }
-func (c If) Out() *os.File       { return c.out }
-func (c If) Err() *os.File       { return c.err }
-func (c While) In() *os.File     { return c.in }
-func (c While) Out() *os.File    { return c.out }
-func (c While) Err() *os.File    { return c.err }
+func (c Simple) In() io.Reader    { return c.in }
+func (c Simple) Out() io.Writer   { return c.out }
+func (c Simple) Err() io.Writer   { return c.err }
+func (c Compound) In() io.Reader  { return c.in }
+func (c Compound) Out() io.Writer { return c.out }
+func (c Compound) Err() io.Writer { return c.err }
+func (c If) In() io.Reader        { return c.in }
+func (c If) Out() io.Writer       { return c.out }
+func (c If) Err() io.Writer       { return c.err }
+func (c While) In() io.Reader     { return c.in }
+func (c While) Out() io.Writer    { return c.out }
+func (c While) Err() io.Writer    { return c.err }
 
-func (c *Simple) SetIn(f *os.File)    { c.in = f }
-func (c *Simple) SetOut(f *os.File)   { c.out = f }
-func (c *Simple) SetErr(f *os.File)   { c.err = f }
-func (c *Compound) SetIn(f *os.File)  { c.in = f }
-func (c *Compound) SetOut(f *os.File) { c.out = f }
-func (c *Compound) SetErr(f *os.File) { c.err = f }
-func (c *If) SetIn(f *os.File)        { c.in = f }
-func (c *If) SetOut(f *os.File)       { c.out = f }
-func (c *If) SetErr(f *os.File)       { c.err = f }
-func (c *While) SetIn(f *os.File)     { c.in = f }
-func (c *While) SetOut(f *os.File)    { c.out = f }
-func (c *While) SetErr(f *os.File)    { c.err = f }
+func (c *Simple) SetIn(r io.Reader)    { c.in = r }
+func (c *Simple) SetOut(w io.Writer)   { c.out = w }
+func (c *Simple) SetErr(w io.Writer)   { c.err = w }
+func (c *Compound) SetIn(r io.Reader)  { c.in = r }
+func (c *Compound) SetOut(w io.Writer) { c.out = w }
+func (c *Compound) SetErr(w io.Writer) { c.err = w }
+func (c *If) SetIn(r io.Reader)        { c.in = r }
+func (c *If) SetOut(w io.Writer)       { c.out = w }
+func (c *If) SetErr(w io.Writer)       { c.err = w }
+func (c *While) SetIn(r io.Reader)     { c.in = r }
+func (c *While) SetOut(w io.Writer)    { c.out = w }
+func (c *While) SetErr(w io.Writer)    { c.err = w }
 
 func (c *Simple) Redirs() []Redirect   { return c.redirs }
 func (c *Compound) Redirs() []Redirect { return c.redirs }
@@ -319,6 +324,14 @@ func (l List) ToStrings() ([]string, commandResult) {
 		xs = append(xs, ys...)
 	}
 	return xs, nil
+}
+
+type ProcSub struct {
+	Body []CommandList
+}
+
+func (ps ProcSub) ToStrings() ([]string, commandResult) {
+	panic("unused")
 }
 
 type ProcRedir struct {

@@ -1,12 +1,15 @@
 package vm
 
 import (
+	"bytes"
 	"errors"
 	"fmt"
 	"os"
 	"os/exec"
 	"slices"
+	"strings"
 	"sync"
+	"unicode"
 
 	"git.sr.ht/~mango/andy/builtin"
 )
@@ -80,7 +83,9 @@ func (vm *Vm) execCommand(cmd Command, ctx context) commandResult {
 		cmd.SetIn(ctx.in)
 	case ctx.in:
 	default:
-		defer cmd.In().Close()
+		if f, ok := cmd.In().(*os.File); ok {
+			defer f.Close()
+		}
 	}
 
 	switch cmd.Out() {
@@ -88,7 +93,9 @@ func (vm *Vm) execCommand(cmd Command, ctx context) commandResult {
 		cmd.SetOut(ctx.out)
 	case ctx.out:
 	default:
-		defer cmd.Out().Close()
+		if f, ok := cmd.Out().(*os.File); ok {
+			defer f.Close()
+		}
 	}
 
 	switch cmd.Err() {
@@ -96,7 +103,9 @@ func (vm *Vm) execCommand(cmd Command, ctx context) commandResult {
 		cmd.SetErr(ctx.err)
 	case ctx.err:
 	default:
-		defer cmd.Err().Close()
+		if f, ok := cmd.Err().(*os.File); ok {
+			defer f.Close()
+		}
 	}
 
 	for _, re := range cmd.Redirs() {
@@ -112,6 +121,18 @@ func (vm *Vm) execCommand(cmd Command, ctx context) commandResult {
 				re.Type = RedirClob
 				name = os.DevNull
 			}
+		case ProcSub:
+			var out bytes.Buffer
+			ctx := ctx
+			ctx.out = &out
+
+			res := vm.execCmdLists(re.File.(ProcSub).Body, ctx)
+			if res.ExitCode() != 0 {
+				return res
+			}
+
+			s := strings.TrimRightFunc(out.String(), unicode.IsSpace)
+			name = s
 		case ProcRedir:
 			pr := re.File.(ProcRedir)
 			r, w, err := os.Pipe()
@@ -279,6 +300,18 @@ func (vm *Vm) execSimple(cmd *Simple, ctx context) commandResult {
 
 	for _, v := range cmd.Args {
 		switch v.(type) {
+		case ProcSub:
+			var out bytes.Buffer
+			ctx := ctx
+			ctx.out = &out
+
+			res := vm.execCmdLists(v.(ProcSub).Body, ctx)
+			if res.ExitCode() != 0 {
+				return res
+			}
+
+			s := strings.TrimRightFunc(out.String(), unicode.IsSpace)
+			args = append(args, s)
 		case ProcRedir:
 			pr := v.(ProcRedir)
 			r, w, err := os.Pipe()

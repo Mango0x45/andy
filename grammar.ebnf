@@ -17,7 +17,7 @@ redir =
 	), value;
 value = arg | string | list | procsub;
 
-procsub = ('<{' | '>{' | '<>{'), program, '}';
+procsub = ('`{', '<{' | '>{' | '<>{'), program, '}';
 
 arg = (* One of more non-whitespace and -metachar characters unless backslash
          escaped *);

@@ -2,6 +2,7 @@ package vm
 
 import (
 	"fmt"
+	"io"
 	"os"
 )
 
@@ -11,7 +12,8 @@ type Vm struct {
 }
 
 type context struct {
-	in, out, err *os.File
+	in       io.Reader
+	out, err io.Writer
 }
 
 func New(interactive bool) *Vm {
@@ -20,7 +22,11 @@ func New(interactive bool) *Vm {
 
 func (vm *Vm) Run(prog Program) {
 	for _, cl := range prog {
-		ret := vm.execCmdList(cl, context{os.Stdin, os.Stdout, os.Stderr})
+		ret := vm.execCmdList(cl, context{
+			os.Stdin,
+			os.Stdout,
+			os.Stderr,
+		})
 		vm.Status = ret.ExitCode()
 		if _, ok := ret.(shellError); ok {
 			fmt.Fprintf(os.Stderr, "andy: %s\n", ret)

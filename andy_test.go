@@ -14,7 +14,7 @@ func init() {
 	os.Chdir("./testdata")
 }
 
-func runAndCapture(t *testing.T, name string, wantOut, wantErr string) {
+func runAndCapture(t *testing.T, name, wantOut, wantErr string) {
 	c := exec.Command("../andy", name+".an")
 	var out, err bytes.Buffer
 	c.Stdout = &out

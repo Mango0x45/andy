@@ -232,6 +232,8 @@ func (p *Parser) parseValue() vm.Value {
 			Type: vm.ProcRead | vm.ProcWrite,
 			Body: p.parseBody(),
 		}
+	case lexer.TokProcSub:
+		v = vm.ProcSub{Body: p.parseBody()}
 	default:
 		die(errExpected{"value", t})
 	}
