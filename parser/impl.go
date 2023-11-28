@@ -80,7 +80,7 @@ func (p *Parser) parsePipeline() vm.Pipeline {
 	}
 }
 
-func (p *Parser) parseCommand() vm.Command {
+func (p *Parser) parseCommand() vm.CleanCommand {
 	var cmd vm.Command
 
 	switch t := p.peek(); {
@@ -116,7 +116,7 @@ func (p *Parser) parseCommand() vm.Command {
 			die(errExpected{"semicolon or newline", t})
 		default:
 			cmd.SetRedirs(redirs)
-			return cmd
+			return vm.CleanCommand{Cmd: cmd}
 		}
 	}
 }
@@ -147,7 +147,7 @@ func (p *Parser) parseIf() *vm.If {
 	if t := p.peek(); t.Kind == lexer.TokArg && t.Val == "if" {
 		p.next() // Consume ‘if’
 		cond.Else = append(cond.Else, vm.CommandList{
-			Rhs: vm.Pipeline{p.parseIf()},
+			Rhs: vm.Pipeline{vm.CleanCommand{Cmd: p.parseIf()}},
 		})
 	} else {
 		if t := p.next(); t.Kind != lexer.TokBcOpen {

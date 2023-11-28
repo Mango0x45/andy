@@ -37,19 +37,28 @@ type CommandList struct {
 }
 
 // Pipeline is a list of commands connected by pipes
-type Pipeline []Command
+type Pipeline []CleanCommand
+
+// CleanCommand is a wrapper around a Command that has a slice of open
+// files/pipes that need to be cleaned up after execution
+type CleanCommand struct {
+	Cmd Command
+	xs  []io.Closer
+}
+
+func (cc CleanCommand) Cleanup() {
+	for _, x := range cc.xs {
+		x.Close()
+	}
+}
+
+func (cc *CleanCommand) Add(x io.Closer) {
+	cc.xs = append(cc.xs, x)
+}
 
 // Command is a command the shell can execute
 type Command interface {
 	isCommand()
-
-	In() io.Reader
-	Out() io.Writer
-	Err() io.Writer
-
-	SetIn(io.Reader)
-	SetOut(io.Writer)
-	SetErr(io.Writer)
 
 	Redirs() []Redirect
 	SetRedirs([]Redirect)
@@ -57,18 +66,14 @@ type Command interface {
 
 // Simple is the simplest form of a command, just arguments and redirects
 type Simple struct {
-	Args     []Value
-	redirs   []Redirect
-	in       io.Reader
-	out, err io.Writer
+	Args   []Value
+	redirs []Redirect
 }
 
 // Compound is a code wrapped within braces
 type Compound struct {
-	Cmds     []CommandList
-	redirs   []Redirect
-	in       io.Reader
-	out, err io.Writer
+	Cmds   []CommandList
+	redirs []Redirect
 }
 
 // If is a conditional branch; it executes Body if Cond was successful
@@ -76,49 +81,19 @@ type If struct {
 	Cond       CommandList
 	Body, Else []CommandList
 	redirs     []Redirect
-	in         io.Reader
-	out, err   io.Writer
 }
 
 // While is a loop; it executes Body for as long as Cond is successful
 type While struct {
-	Cond     CommandList
-	Body     []CommandList
-	redirs   []Redirect
-	in       io.Reader
-	out, err io.Writer
+	Cond   CommandList
+	Body   []CommandList
+	redirs []Redirect
 }
 
 func (_ Simple) isCommand()   {}
 func (_ Compound) isCommand() {}
 func (_ If) isCommand()       {}
 func (_ While) isCommand()    {}
-
-func (c Simple) In() io.Reader    { return c.in }
-func (c Simple) Out() io.Writer   { return c.out }
-func (c Simple) Err() io.Writer   { return c.err }
-func (c Compound) In() io.Reader  { return c.in }
-func (c Compound) Out() io.Writer { return c.out }
-func (c Compound) Err() io.Writer { return c.err }
-func (c If) In() io.Reader        { return c.in }
-func (c If) Out() io.Writer       { return c.out }
-func (c If) Err() io.Writer       { return c.err }
-func (c While) In() io.Reader     { return c.in }
-func (c While) Out() io.Writer    { return c.out }
-func (c While) Err() io.Writer    { return c.err }
-
-func (c *Simple) SetIn(r io.Reader)    { c.in = r }
-func (c *Simple) SetOut(w io.Writer)   { c.out = w }
-func (c *Simple) SetErr(w io.Writer)   { c.err = w }
-func (c *Compound) SetIn(r io.Reader)  { c.in = r }
-func (c *Compound) SetOut(w io.Writer) { c.out = w }
-func (c *Compound) SetErr(w io.Writer) { c.err = w }
-func (c *If) SetIn(r io.Reader)        { c.in = r }
-func (c *If) SetOut(w io.Writer)       { c.out = w }
-func (c *If) SetErr(w io.Writer)       { c.err = w }
-func (c *While) SetIn(r io.Reader)     { c.in = r }
-func (c *While) SetOut(w io.Writer)    { c.out = w }
-func (c *While) SetErr(w io.Writer)    { c.err = w }
 
 func (c *Simple) Redirs() []Redirect   { return c.redirs }
 func (c *Compound) Redirs() []Redirect { return c.redirs }
@@ -369,9 +344,7 @@ func (pr *ProcRedir) ToStrings(ctx context) ([]string, commandResult) {
 	}
 
 	go func() {
-		if res := execCmdLists(pr.Body, ctx); failed(res) {
-			panic("TODO")
-		}
+		_ = execCmdLists(pr.Body, ctx)
 		if pr.Is(ProcRead) {
 			w.Close()
 		}
@@ -383,13 +356,15 @@ func (pr *ProcRedir) ToStrings(ctx context) ([]string, commandResult) {
 	return xs, nil
 }
 
-func (pr ProcRedir) Close() {
+func (pr ProcRedir) Close() error {
+	var e1, e2 error
 	if pr.Is(ProcRead) {
-		pr.r.Close()
+		e1 = pr.r.Close()
 	}
 	if pr.Is(ProcWrite) {
-		pr.w.Close()
+		e2 = pr.w.Close()
 	}
+	return errors.Join(e1, e2)
 }
 
 func (pr ProcRedir) OpenFiles() []*os.File {

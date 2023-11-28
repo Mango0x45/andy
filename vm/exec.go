@@ -4,6 +4,7 @@ import (
 	"cmp"
 	"errors"
 	"fmt"
+	"io"
 	"os"
 	"os/exec"
 	"slices"
@@ -41,6 +42,11 @@ func execCmdList(cl CommandList, ctx context) commandResult {
 
 func execPipeline(pl Pipeline, ctx context) commandResult {
 	n := len(pl)
+	cs := make([]context, n)
+
+	for i := range cs {
+		cs[i] = ctx
+	}
 
 	for i := range pl[:n-1] {
 		r, w, err := os.Pipe()
@@ -48,22 +54,24 @@ func execPipeline(pl Pipeline, ctx context) commandResult {
 			return errInternal{err}
 		}
 
-		pl[i+0].SetOut(w)
-		pl[i+1].SetIn(r)
+		cs[i].out = w
+		pl[i].Add(w)
+		cs[i+1].in = r
+		pl[i+1].Add(r)
 	}
 
 	wg := sync.WaitGroup{}
-	wg.Add(n-1)
+	wg.Add(n - 1)
 
 	// TODO: Go 1.22 fixed for-loops
-	for _, cmd := range pl[:len(pl)-1] {
-		go func(cmd Command) {
-			execCommand(cmd, ctx)
+	for i := range pl[:len(pl)-1] {
+		go func(cc CleanCommand, ctx context) {
+			execCommand(cc, ctx)
 			wg.Done()
-		}(cmd)
+		}(pl[i], cs[i])
 	}
 
-	if res := execCommand(pl[len(pl)-1], ctx); failed(res) {
+	if res := execCommand(pl[n-1], cs[n-1]); failed(res) {
 		return res
 	}
 	wg.Wait()
@@ -71,43 +79,24 @@ func execPipeline(pl Pipeline, ctx context) commandResult {
 	return errExitCode(0)
 }
 
-func execCommand(cmd Command, ctx context) commandResult {
-	switch cmd.In() {
-	case nil:
-		cmd.SetIn(ctx.in)
-	case ctx.in:
-	default:
-		if f, ok := cmd.In().(*os.File); ok {
-			defer f.Close()
-		}
-	}
-
-	switch cmd.Out() {
-	case nil:
-		cmd.SetOut(ctx.out)
-	case ctx.out:
-	default:
-		if f, ok := cmd.Out().(*os.File); ok {
-			defer f.Close()
-		}
-	}
-
-	switch cmd.Err() {
-	case nil:
-		cmd.SetErr(ctx.err)
-	case ctx.err:
-	default:
-		if f, ok := cmd.Err().(*os.File); ok {
-			defer f.Close()
-		}
-	}
-
-	for _, re := range cmd.Redirs() {
+func execCommand(cc CleanCommand, ctx context) commandResult {
+	for _, re := range cc.Cmd.Redirs() {
 		var name string
+
+		ss, err := re.File.ToStrings(ctx)
+		if err != nil {
+			return err
+		}
+		if len(ss) > 1 {
+			return errExpected{
+				want: "filename",
+				got:  fmt.Sprintf("%d filesnames", len(ss)),
+			}
+		}
+		name = ss[0]
+
 		switch re.File.(type) {
 		case Argument:
-			name = string(re.File.(Argument))
-
 			switch {
 			case re.Type == RedirRead && name == "_":
 				name = os.DevNull
@@ -115,45 +104,30 @@ func execCommand(cmd Command, ctx context) commandResult {
 				re.Type = RedirClob
 				name = os.DevNull
 			}
-		default:
-			xs, err := re.File.ToStrings(ctx)
-			if err != nil {
-				return err
-			}
-			if pr, ok := re.File.(*ProcRedir); ok {
-				defer pr.Close()
-			}
-			if len(xs) > 1 {
-				return errExpected{
-					want: "filename",
-					got:  fmt.Sprintf("%d filesnames", len(xs)),
-				}
-			}
-			name = xs[0]
+		case *ProcRedir:
+			cc.Add(re.File.(*ProcRedir))
 		}
 
+		var f io.ReadWriteCloser
 		switch re.Type {
 		case RedirAppend:
 			fp, err := os.OpenFile(name, appendFlags, 0666)
 			if err != nil {
 				return errInternal{err}
 			}
-			defer fp.Close()
-			cmd.SetOut(fp)
+			f = fp
 		case RedirClob:
 			fp, err := os.Create(name)
 			if err != nil {
 				return errInternal{err}
 			}
-			defer fp.Close()
-			cmd.SetOut(fp)
+			f = fp
 		case RedirRead:
 			fp, err := os.Open(name)
 			if err != nil {
 				return errInternal{err}
 			}
-			defer fp.Close()
-			cmd.SetIn(fp)
+			f = fp
 		case RedirWrite:
 			_, err := os.Stat(name)
 			switch {
@@ -162,8 +136,7 @@ func execCommand(cmd Command, ctx context) commandResult {
 				if err != nil {
 					return errInternal{err}
 				}
-				defer fp.Close()
-				cmd.SetOut(fp)
+				f = fp
 			case err != nil:
 				return errFileOp{"stat", name, err}
 			default: // File exists
@@ -172,23 +145,31 @@ func execCommand(cmd Command, ctx context) commandResult {
 		default:
 			panic("unreachable")
 		}
+
+		cc.Add(f)
+		switch re.Type {
+		case RedirAppend, RedirClob, RedirWrite:
+			ctx.out = f
+		case RedirRead:
+			ctx.in = f
+		}
 	}
 
-	switch cmd.(type) {
+	defer cc.Cleanup()
+	switch cc.Cmd.(type) {
 	case *Simple:
-		return execSimple(cmd.(*Simple), ctx)
+		return execSimple(cc.Cmd.(*Simple), ctx)
 	case *Compound:
-		return execCompound(cmd.(*Compound))
+		return execCompound(cc.Cmd.(*Compound), ctx)
 	case *If:
-		return execIf(cmd.(*If))
+		return execIf(cc.Cmd.(*If), ctx)
 	case *While:
-		return execWhile(cmd.(*While))
+		return execWhile(cc.Cmd.(*While), ctx)
 	}
 	panic("unreachable")
 }
 
-func execWhile(cmd *While) commandResult {
-	ctx := context{cmd.In(), cmd.Out(), cmd.Err()}
+func execWhile(cmd *While, ctx context) commandResult {
 	for {
 		res := execCmdList(cmd.Cond, ctx)
 		switch ec, ok := res.(errExitCode); {
@@ -204,8 +185,7 @@ func execWhile(cmd *While) commandResult {
 	}
 }
 
-func execIf(cmd *If) commandResult {
-	ctx := context{cmd.In(), cmd.Out(), cmd.Err()}
+func execIf(cmd *If, ctx context) commandResult {
 	res := execCmdList(cmd.Cond, ctx)
 	if _, ok := res.(errExitCode); !ok {
 		return res
@@ -225,8 +205,7 @@ func execIf(cmd *If) commandResult {
 	return errExitCode(0)
 }
 
-func execCompound(cmd *Compound) commandResult {
-	ctx := context{cmd.In(), cmd.Out(), cmd.Err()}
+func execCompound(cmd *Compound, ctx context) commandResult {
 	for _, cl := range cmd.Cmds {
 		if res := execCmdList(cl, ctx); failed(res) {
 			return res
@@ -257,7 +236,7 @@ func execSimple(cmd *Simple, ctx context) commandResult {
 	}
 
 	c := exec.Command(args[0], args[1:]...)
-	c.Stdin, c.Stdout, c.Stderr = cmd.In(), cmd.Out(), cmd.Err()
+	c.Stdin, c.Stdout, c.Stderr = ctx.in, ctx.out, ctx.err
 
 	if len(extras) > 0 {
 		maxFd := slices.MaxFunc(extras, func(a, b *os.File) int {
