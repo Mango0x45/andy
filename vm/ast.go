@@ -336,7 +336,7 @@ func (ps ProcSub) ToStrings(ctx context) ([]string, commandResult) {
 	var out bytes.Buffer
 	ctx.out = &out
 
-	if res := execCmdLists(ps.Body, ctx); res.ExitCode() != 0 {
+	if res := execCmdLists(ps.Body, ctx); failed(res) {
 		return nil, res
 	}
 

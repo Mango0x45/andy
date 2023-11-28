@@ -52,25 +52,21 @@ func execPipeline(pl Pipeline, ctx context) commandResult {
 		pl[i+1].SetIn(r)
 	}
 
-	c := make(chan commandResult, n)
 	wg := sync.WaitGroup{}
-	wg.Add(n)
+	wg.Add(n-1)
 
-	for _, cmd := range pl {
+	// TODO: Go 1.22 fixed for-loops
+	for _, cmd := range pl[:len(pl)-1] {
 		go func(cmd Command) {
-			c <- execCommand(cmd, ctx)
+			execCommand(cmd, ctx)
 			wg.Done()
 		}(cmd)
 	}
 
-	wg.Wait()
-	close(c)
-
-	for res := range c {
-		if failed(res) {
-			return res
-		}
+	if res := execCommand(pl[len(pl)-1], ctx); failed(res) {
+		return res
 	}
+	wg.Wait()
 
 	return errExitCode(0)
 }
@@ -202,10 +198,8 @@ func execWhile(cmd *While) commandResult {
 			return errExitCode(0)
 		}
 
-		for _, cl := range cmd.Body {
-			if res := execCmdList(cl, ctx); failed(res) {
-				return res
-			}
+		if res := execCmdLists(cmd.Body, ctx); failed(res) {
+			return res
 		}
 	}
 }
