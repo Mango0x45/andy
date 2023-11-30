@@ -46,7 +46,6 @@ func read(cmd *exec.Cmd) uint8 {
 
 	cmd.Args = cmd.Args[optind:]
 	if len(cmd.Args) != 1 {
-		fmt.Printf("cmd.Args=%+v\n", cmd.Args)
 		return usage(cmd)
 	}
 
