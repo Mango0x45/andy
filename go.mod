@@ -1,5 +1,5 @@
 module git.sr.ht/~mango/andy
 
-go 1.21.3
+go 1.21.4
 
-require git.sr.ht/~sircmpwn/getopt v1.0.0
+require git.sr.ht/~mango/opts v1.0.0

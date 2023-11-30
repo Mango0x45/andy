@@ -11,26 +11,31 @@ import (
 	"strconv"
 	"strings"
 
-	"git.sr.ht/~sircmpwn/getopt"
+	"git.sr.ht/~mango/opts"
 )
 
 func read(cmd *exec.Cmd) uint8 {
-	opts, optind, err := getopt.Getopts(cmd.Args, "d:Dn:")
+	flags, optind, err := opts.GetLong(cmd.Args, []opts.LongOpt{
+		{Short: 'd', Long: "delimiters", Arg: opts.Required},
+		{Short: 'D', Long: "no-empty", Arg: opts.None},
+		{Short: 'n', Long: "count", Arg: opts.Required},
+	})
 	if err != nil {
+		fmt.Fprintf(cmd.Stderr, "read: %s\n", err)
 		return usage(cmd)
 	}
 
 	var ds []byte
 	var noEmpty bool
 	cnt := math.MaxInt
-	for _, opt := range opts {
-		switch opt.Option {
+	for _, f := range flags {
+		switch f.Key {
 		case 'd':
-			ds = []byte(opt.Value)
+			ds = []byte(f.Value)
 		case 'D':
 			noEmpty = true
 		case 'n':
-			n, err := strconv.Atoi(opt.Value)
+			n, err := strconv.Atoi(f.Value)
 			if err != nil {
 				errorf(cmd, "%s", err)
 				return usage(cmd)
