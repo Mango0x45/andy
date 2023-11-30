@@ -21,7 +21,7 @@ func read(cmd *exec.Cmd) uint8 {
 		{Short: 'n', Long: "count", Arg: opts.Required},
 	})
 	if err != nil {
-		fmt.Fprintf(cmd.Stderr, "read: %s\n", err)
+		errorf(cmd, "%s", err)
 		return usage(cmd)
 	}
 
