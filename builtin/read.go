@@ -22,7 +22,7 @@ func read(cmd *exec.Cmd) uint8 {
 	})
 	if err != nil {
 		errorf(cmd, "%s", err)
-		return usage(cmd)
+		return readUsage(cmd)
 	}
 
 	var ds []byte
@@ -38,7 +38,7 @@ func read(cmd *exec.Cmd) uint8 {
 			n, err := strconv.Atoi(f.Value)
 			if err != nil {
 				errorf(cmd, "%s", err)
-				return usage(cmd)
+				return readUsage(cmd)
 			}
 			cnt = n
 		}
@@ -46,7 +46,7 @@ func read(cmd *exec.Cmd) uint8 {
 
 	cmd.Args = cmd.Args[optind:]
 	if len(cmd.Args) != 1 {
-		return usage(cmd)
+		return readUsage(cmd)
 	}
 
 	sb := strings.Builder{}
@@ -98,7 +98,7 @@ outer:
 	return res
 }
 
-func usage(cmd *exec.Cmd) uint8 {
-	fmt.Fprintf(cmd.Stderr, "Usage: read [-D] [-n num] [-d string] variable\n")
+func readUsage(cmd *exec.Cmd) uint8 {
+	fmt.Fprintln(cmd.Stderr, "Usage: read [-D] [-n num] [-d string] variable")
 	return 1
 }
