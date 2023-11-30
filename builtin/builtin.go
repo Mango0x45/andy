@@ -9,6 +9,7 @@ type builtin func(cmd *exec.Cmd) uint8
 
 var Commands = map[string]builtin{
 	"cd":    cd,
+	"cmd":   cmd,
 	"echo":  echo,
 	"false": false_,
 	"read":  read,
