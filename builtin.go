@@ -54,19 +54,25 @@ func (s *stack) pop() (string, bool) {
 }
 
 func cmdDot(cmd *exec.Cmd) uint8 {
-	if len(cmd.Args) < 2 {
-		fmt.Fprintln(cmd.Stderr, "Usage: . file ...")
-		return 1
+	if len(cmd.Args) == 1 {
+		cmd.Args = append(cmd.Args, "-")
 	}
-
 	for _, f := range cmd.Args[1:] {
-		bytes, err := os.ReadFile(f)
+		var buf []byte
+		var err error
+
+		if f == "-" {
+			buf, err = io.ReadAll(cmd.Stdin)
+		} else {
+			buf, err = os.ReadFile(f)
+		}
+
 		if err != nil {
 			cmdErrorf(cmd, "%s", err)
 			return 1
 		}
 
-		l := newLexer(string(bytes))
+		l := newLexer(string(buf))
 		p := newParser(l.out)
 		go l.run()
 		globalVm.run(p.run())
