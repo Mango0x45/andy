@@ -256,7 +256,7 @@ func cmdSet(cmd *exec.Cmd) uint8 {
 
 	usage := func() uint8 {
 		fmt.Fprintln(cmd.Stderr, "Usage: set variable [value ...]\n"+
-			"       set -e variable value")
+			"       set -e variable [value]")
 		return 1
 	}
 
