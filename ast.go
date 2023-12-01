@@ -35,13 +35,13 @@ type astCleanCommand struct {
 	xs  []io.Closer
 }
 
-func (cc astCleanCommand) Cleanup() {
+func (cc astCleanCommand) cleanup() {
 	for _, x := range cc.xs {
 		x.Close()
 	}
 }
 
-func (cc *astCleanCommand) Add(x io.Closer) {
+func (cc *astCleanCommand) add(x io.Closer) {
 	cc.xs = append(cc.xs, x)
 }
 

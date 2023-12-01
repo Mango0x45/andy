@@ -52,9 +52,9 @@ func execPipeline(pl astPipeline, ctx context) commandResult {
 		}
 
 		cs[i].out = w
-		pl[i].Add(w)
+		pl[i].add(w)
 		cs[i+1].in = r
-		pl[i+1].Add(r)
+		pl[i+1].add(r)
 	}
 
 	var wg sync.WaitGroup
@@ -102,7 +102,7 @@ func execCommand(cc astCleanCommand, ctx context) commandResult {
 				name = os.DevNull
 			}
 		case *astProcRedir:
-			cc.Add(re.file.(*astProcRedir))
+			cc.add(re.file.(*astProcRedir))
 		}
 
 		var f io.ReadWriteCloser
@@ -143,7 +143,7 @@ func execCommand(cc astCleanCommand, ctx context) commandResult {
 			panic("unreachable")
 		}
 
-		cc.Add(f)
+		cc.add(f)
 		switch re.kind {
 		case redirAppend, redirClob, redirWrite:
 			ctx.out = f
@@ -152,7 +152,7 @@ func execCommand(cc astCleanCommand, ctx context) commandResult {
 		}
 	}
 
-	defer cc.Cleanup()
+	defer cc.cleanup()
 	switch cc.cmd.(type) {
 	case *astSimple:
 		return execSimple(cc.cmd.(*astSimple), ctx)
