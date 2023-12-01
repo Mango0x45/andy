@@ -22,8 +22,7 @@ type stack []string
 
 var (
 	builtins map[string]builtin
-	dirStack stack               = make([]string, 0, 64)
-	varMap   map[string][]string = make(map[string][]string, 64)
+	dirStack stack = make([]string, 0, 64)
 )
 
 func init() {

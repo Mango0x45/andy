@@ -13,12 +13,43 @@ import (
 
 const appendFlags = os.O_APPEND | os.O_CREATE | os.O_WRONLY
 
-func execCmdLists(cls []astCommandList, ctx context) commandResult {
-	for _, cl := range cls {
-		if res := execCmdList(cl, ctx); cmdFailed(res) {
+func execTopLevels(tls []astTopLevel, ctx context) commandResult {
+	for _, tl := range tls {
+		if res := execTopLevel(tl, ctx); cmdFailed(res) {
 			return res
 		}
 	}
+	return errExitCode(0)
+}
+
+func execTopLevel(tl astTopLevel, ctx context) commandResult {
+	var res commandResult
+	switch tl.(type) {
+	case astFuncDef:
+		res = execFuncDef(tl.(astFuncDef), ctx)
+	case astCommandList:
+		res = execCmdList(tl.(astCommandList), ctx)
+	}
+
+	if cmdFailed(res) {
+		return res
+	}
+	return errExitCode(0)
+}
+
+func execFuncDef(fd astFuncDef, ctx context) commandResult {
+	args := make([]string, 0, len(fd.args))
+	for _, a := range fd.args {
+		s, err := a.toStrings(ctx)
+		if err != nil {
+			return err
+		}
+		args = append(args, s...)
+	}
+
+	f := function{args: args[1:], body: fd.body}
+	funcMap[args[0]] = f
+
 	return errExitCode(0)
 }
 
@@ -176,7 +207,7 @@ func execWhile(cmd *astWhile, ctx context) commandResult {
 			return errExitCode(0)
 		}
 
-		if res := execCmdLists(cmd.body, ctx); cmdFailed(res) {
+		if res := execTopLevels(cmd.body, ctx); cmdFailed(res) {
 			return res
 		}
 	}
@@ -188,27 +219,17 @@ func execIf(cmd *astIf, ctx context) commandResult {
 		return res
 	}
 
-	var cmds []astCommandList
+	var cmds []astTopLevel
 	if cmdFailed(res) {
 		cmds = cmd.else_
 	} else {
 		cmds = cmd.body
 	}
-	for _, cl := range cmds {
-		if res := execCmdList(cl, ctx); cmdFailed(res) {
-			return res
-		}
-	}
-	return errExitCode(0)
+	return execTopLevels(cmds, ctx)
 }
 
 func execCompound(cmd *astCompound, ctx context) commandResult {
-	for _, cl := range cmd.cmds {
-		if res := execCmdList(cl, ctx); cmdFailed(res) {
-			return res
-		}
-	}
-	return errExitCode(0)
+	return execTopLevels(cmd.cmds, ctx)
 }
 
 func execSimple(cmd *astSimple, ctx context) commandResult {
@@ -245,6 +266,20 @@ func execSimple(cmd *astSimple, ctx context) commandResult {
 		}
 	}
 
+	if f, ok := funcMap[c.Args[0]]; ok {
+		ctx.scope = make(map[string][]string, len(f.args))
+		args := c.Args[1:]
+		for i, a := range f.args {
+			if i >= len(args) {
+				break
+			}
+			ctx.scope[a] = []string{args[i]}
+		}
+		if len(args) > len(f.args) {
+			ctx.scope["_"] = args[len(f.args):]
+		}
+		return execTopLevels(f.body, ctx)
+	}
 	if f, ok := builtins[c.Args[0]]; ok {
 		return errExitCode(f(c))
 	}

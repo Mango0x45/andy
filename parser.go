@@ -40,15 +40,33 @@ func (p *parser) parseProgram() astProgram {
 	var prog astProgram
 
 	for {
-		switch p.peek().kind {
-		case tokEndStmt:
+		switch t := p.peek(); {
+		case t.kind == tokEndStmt:
 			p.next()
-		case tokEof:
+		case t.kind == tokEof:
 			return prog
+		case t.kind == tokArg && t.val == "func":
+			prog = append(prog, p.parseFuncDef())
 		default:
 			prog = append(prog, p.parseCommandList())
 		}
 	}
+}
+
+func (p *parser) parseFuncDef() astFuncDef {
+	p.next() // skip ‘func’
+
+	args := make([]astValue, 0, 4)
+	args = append(args, p.parseValue())
+	for isValueTok(p.peek().kind) {
+		args = append(args, p.parseValue())
+	}
+	if t := p.next(); t.kind != tokBraceOpen {
+		die(errExpected{"opening brace", t})
+	}
+	body := p.parseBody()
+
+	return astFuncDef{args, body}
 }
 
 func (p *parser) parseCommandList() astCommandList {
@@ -188,8 +206,8 @@ out:
 	return &cond
 }
 
-func (p *parser) parseBody() []astCommandList {
-	xs := []astCommandList{}
+func (p *parser) parseBody() []astTopLevel {
+	xs := []astTopLevel{}
 
 	for {
 		switch t := p.peek(); t.kind {
@@ -207,7 +225,7 @@ func (p *parser) parseBody() []astCommandList {
 }
 
 func (p *parser) parseCompound() *astCompound {
-	cmds := make([]astCommandList, 0, 4) // Add a little capacity
+	cmds := make([]astTopLevel, 0, 4) // Add a little capacity
 
 	for {
 		switch p.peek().kind {

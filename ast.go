@@ -14,12 +14,15 @@ import (
 
 // See grammar.ebnf in the project root for details
 
-type astProgram = []astCommandList
+type astProgram = []astTopLevel
 
-type astXCommandList struct {
-	lhs astPipeline
-	op  astBinaryOp
-	rhs *astXCommandList
+type astTopLevel interface {
+	isTopLevel()
+}
+
+type astFuncDef struct {
+	args []astValue
+	body []astTopLevel
 }
 
 type astCommandList struct {
@@ -27,6 +30,15 @@ type astCommandList struct {
 	op  astBinaryOp
 	rhs astPipeline
 }
+
+type astXCommandList struct {
+	lhs astPipeline
+	op  astBinaryOp
+	rhs *astXCommandList
+}
+
+func (_ astFuncDef) isTopLevel()     {}
+func (_ astCommandList) isTopLevel() {}
 
 type astPipeline []astCleanCommand
 
@@ -58,19 +70,19 @@ type astSimple struct {
 }
 
 type astCompound struct {
-	cmds []astCommandList
+	cmds []astTopLevel
 	rs   []astRedirect
 }
 
 type astIf struct {
 	cond        astCommandList
-	body, else_ []astCommandList
+	body, else_ []astTopLevel
 	rs          []astRedirect
 }
 
 type astWhile struct {
 	cond astCommandList
-	body []astCommandList
+	body []astTopLevel
 	rs   []astRedirect
 }
 
@@ -292,14 +304,14 @@ func (l astList) toStrings(ctx context) ([]string, commandResult) {
 }
 
 type astProcSub struct {
-	body []astCommandList
+	body []astTopLevel
 }
 
 func (ps astProcSub) toStrings(ctx context) ([]string, commandResult) {
 	var out bytes.Buffer
 	ctx.out = &out
 
-	if res := execCmdLists(ps.body, ctx); cmdFailed(res) {
+	if res := execTopLevels(ps.body, ctx); cmdFailed(res) {
 		return nil, res
 	}
 
@@ -309,7 +321,7 @@ func (ps astProcSub) toStrings(ctx context) ([]string, commandResult) {
 
 type astProcRedir struct {
 	kind procRedirKind
-	body []astCommandList
+	body []astTopLevel
 	r, w *os.File
 }
 
@@ -332,7 +344,7 @@ func (pr *astProcRedir) toStrings(ctx context) ([]string, commandResult) {
 	}
 
 	go func() {
-		_ = execCmdLists(pr.body, ctx)
+		_ = execTopLevels(pr.body, ctx)
 		if pr.is(procRead) {
 			w.Close()
 		}

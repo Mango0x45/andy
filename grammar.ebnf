@@ -1,7 +1,9 @@
-program = {cmdlist};
+program = {cmdlist | funcdef};
 cmdlist = pipeline, {lop, pipeline}, end;
 pipeline = cmd, {'|', cmd};
 cmd = (simple | compound | if | while), {redir};
+
+funcdef = 'func', value, {value}, '{', program, '}';
 
 simple = value, {value};
 compound = '{', program, '}';

@@ -8,6 +8,7 @@ import (
 type context struct {
 	in       io.Reader
 	out, err io.Writer
+	scope    map[string][]string
 }
 
 type vm struct {
@@ -15,12 +16,23 @@ type vm struct {
 	interactive bool
 }
 
+type function struct {
+	args []string
+	body astProgram
+}
+
+var (
+	funcMap map[string]function = make(map[string]function, 64)
+	varMap  map[string][]string = make(map[string][]string, 64)
+)
+
 func (vm *vm) run(prog astProgram) {
-	for _, cl := range prog {
-		ret := execCmdList(cl, context{
+	for _, tl := range prog {
+		ret := execTopLevel(tl, context{
 			os.Stdin,
 			os.Stdout,
 			os.Stderr,
+			nil,
 		})
 		vm.status = ret.ExitCode()
 		if _, ok := ret.(shellError); ok {

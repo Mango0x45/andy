@@ -41,6 +41,7 @@ a while.  The currently implemented features are:
 - [X] Process substitution (``​`{…}``, `<{…}`, `>{…}`, `<>{…}`)
 - [X] Read stdin into array (`cmd | read var`)
 - [X] Source scripts (`. file…`)
+- [X] Define functions with named arguments (`func f arg1 … {…}`)
 
 ## Example
 
