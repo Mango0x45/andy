@@ -21,6 +21,12 @@ type builtin func(cmd *exec.Cmd) uint8
 type stack []string
 
 var (
+	builtins map[string]builtin
+	dirStack stack               = make([]string, 0, 64)
+	varMap   map[string][]string = make(map[string][]string, 64)
+)
+
+func init() {
 	builtins = map[string]builtin{
 		".":     cmdDot,
 		"cd":    cmdCd,
@@ -31,11 +37,7 @@ var (
 		"set":   cmdSet,
 		"true":  cmdTrue,
 	}
-
-	dirStack stack = make([]string, 0, 64)
-
-	varMap map[string][]string = make(map[string][]string, 64)
-)
+}
 
 func (s *stack) push(dir string) {
 	*s = append(*s, dir)
@@ -57,8 +59,17 @@ func cmdDot(cmd *exec.Cmd) uint8 {
 		return 1
 	}
 
-	for range cmd.Args[2:] {
-		panic("TODO")
+	for _, f := range cmd.Args[1:] {
+		bytes, err := os.ReadFile(f)
+		if err != nil {
+			cmdErrorf(cmd, "%s", err)
+			return 1
+		}
+
+		l := newLexer(string(bytes))
+		p := newParser(l.out)
+		go l.run()
+		globalVm.run(p.run())
 	}
 	return 0
 }

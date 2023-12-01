@@ -8,6 +8,8 @@ import (
 	"os"
 )
 
+var globalVm vm
+
 func main() {
 	switch len(os.Args) {
 	case 1:
@@ -21,11 +23,11 @@ func main() {
 }
 
 func runRepl() {
-	vm := vm{interactive: true}
 	r := bufio.NewReader(os.Stdin)
+	globalVm.interactive = true
 
 	for {
-		fmt.Fprintf(os.Stderr, "[%d] > ", vm.status)
+		fmt.Fprintf(os.Stderr, "[%d] > ", globalVm.status)
 		line, err := r.ReadString('\n')
 
 		switch {
@@ -39,12 +41,11 @@ func runRepl() {
 		l := newLexer(line)
 		p := newParser(l.out)
 		go l.run()
-		vm.run(p.run())
+		globalVm.run(p.run())
 	}
 }
 
 func runFile(f string) {
-	vm := vm{}
 	bytes, err := os.ReadFile(f)
 	if err != nil {
 		die(err)
@@ -53,7 +54,7 @@ func runFile(f string) {
 	l := newLexer(string(bytes))
 	p := newParser(l.out)
 	go l.run()
-	vm.run(p.run())
+	globalVm.run(p.run())
 }
 
 func warn(e error) {
