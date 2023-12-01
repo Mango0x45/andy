@@ -206,7 +206,13 @@ func getIndex(s string, n int) (int, commandResult) {
 }
 
 func (vr astVarRef) toStrings(ctx context) ([]string, commandResult) {
-	xs, _ := varMap[vr.ident]
+	xs, ok := ctx.scope[vr.ident]
+	if !ok {
+		xs, ok = varMap[vr.ident]
+	}
+	if !ok {
+		xs = []string{os.Getenv(vr.ident)}
+	}
 
 	if vr.indices != nil {
 		ys := make([]string, 0, len(xs))
