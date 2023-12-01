@@ -223,7 +223,9 @@ func (vr astVarRef) toStrings(ctx context) ([]string, commandResult) {
 		xs, ok = varMap[vr.ident]
 	}
 	if !ok {
-		xs = []string{os.Getenv(vr.ident)}
+		if x, ok := os.LookupEnv(vr.ident); ok {
+			xs = []string{x}
+		}
 	}
 
 	if vr.indices != nil {

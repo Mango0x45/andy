@@ -10,7 +10,8 @@ import (
 func init() {
 	// Ensure that we are testing the current code, and are in the testing
 	// directory
-	exec.Command("go", "build").Run()
+	os.Chdir("../../")
+	exec.Command("go", "build", "./cmd/andy").Run()
 	os.Chdir("./testdata")
 }
 
