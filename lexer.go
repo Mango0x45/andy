@@ -1,13 +1,14 @@
-package lexer
+package main
 
 import (
 	"errors"
 	"fmt"
 	"strings"
 	"unicode"
+	"unicode/utf8"
 )
 
-var escapes = map[rune]rune{
+var stringEscapes = map[rune]rune{
 	'\\': '\\',
 	'0':  '\000',
 	'a':  '\a',
@@ -19,29 +20,98 @@ var escapes = map[rune]rune{
 	'v':  '\v',
 }
 
+const eof rune = -1
+
+type lexer struct {
+	input        string
+	out          chan token
+	pos          int
+	start        int
+	width        int
+	bracketDepth int
+	inQuotes     bool
+}
+
 type lexFn func(*lexer) lexFn
+
+func newLexer(s string) lexer {
+	return lexer{
+		input: s,
+		out:   make(chan token),
+	}
+}
+
+func (l *lexer) run() {
+	for state := lexDefault; state != nil; {
+		state = state(l)
+	}
+	close(l.out)
+}
+
+func (l *lexer) emit(t tokenKind) {
+	l.out <- token{t, l.input[l.start:l.pos]}
+}
+
+func (l *lexer) next() rune {
+	var r rune
+
+	if l.pos >= len(l.input) {
+		l.width = 0
+		return eof
+	}
+	r, l.width = utf8.DecodeRuneInString(l.input[l.pos:])
+	l.pos += l.width
+	return r
+}
+
+func (l *lexer) peek() rune {
+	r := l.next()
+	l.backup()
+	return r
+}
+
+func (l *lexer) backup() {
+	l.pos -= l.width
+}
+
+func (l *lexer) acceptRun(r rune) int {
+	m := 0
+	for l.next() == r {
+		m++
+	}
+	l.backup()
+	return m
+}
+
+func (l *lexer) errorf(format string, args ...any) lexFn {
+	l.out <- token{
+		kind: tokError,
+		val:  fmt.Sprintf(format, args...),
+	}
+	return nil
+}
 
 func lexDefault(l *lexer) lexFn {
 	for {
 		switch r := l.next(); {
-		case IsEol(r):
-			l.emit(TokEndStmt)
+		case isEol(r):
+			l.emit(tokEndStmt)
 		case r == eof:
-			l.emit(TokEof)
+			l.emit(tokEof)
 			return nil
 
 		case strings.HasPrefix(l.input[l.pos-l.width:], "`{"):
 			l.pos += 1
-			l.emit(TokProcSub)
+			l.emit(tokProcSub)
 		case strings.HasPrefix(l.input[l.pos-l.width:], "<{"):
 			l.pos += 1
-			l.emit(TokProcRead)
+			l.emit(tokProcRead)
 		case strings.HasPrefix(l.input[l.pos-l.width:], ">{"):
 			l.pos += 1
-			l.emit(TokProcWrite)
+			l.emit(tokProcWrite)
 		case strings.HasPrefix(l.input[l.pos-l.width:], "<>{"):
 			l.pos += 2
-			l.emit(TokProcRdWr)
+			l.emit(tokProcRdWr)
 
 		case r == '&':
 			return lexAmp
@@ -54,21 +124,21 @@ func lexDefault(l *lexer) lexFn {
 			l.backup()
 			return lexStringDouble
 		case r == '<':
-			l.emit(TokRead)
+			l.emit(tokRead)
 		case r == '>':
 			return lexWrite
 		case r == '{':
-			l.emit(TokBcOpen)
+			l.emit(tokBraceOpen)
 		case r == '}':
-			l.emit(TokBcClose)
+			l.emit(tokBraceClose)
 		case r == '(':
-			l.emit(TokPOpen)
+			l.emit(tokParenOpen)
 		case r == ')':
-			l.emit(TokPClose)
+			l.emit(tokParenClose)
 			return lexMaybeConcat
-		case r == ']' && l.brktDepth > 0:
-			l.emit(TokBkClose)
-			l.brktDepth--
+		case r == ']' && l.bracketDepth > 0:
+			l.emit(tokBracketClose)
+			l.bracketDepth--
 			if l.inQuotes {
 				return lexStringDouble
 			}
@@ -97,7 +167,7 @@ func lexAmp(l *lexer) lexFn {
 	switch l.peek() {
 	case '&':
 		l.next()
-		l.emit(TokLAnd)
+		l.emit(tokLAnd)
 	default:
 		panic("Implement & operator")
 	}
@@ -108,9 +178,9 @@ func lexPipe(l *lexer) lexFn {
 	switch l.peek() {
 	case '|':
 		l.next()
-		l.emit(TokLOr)
+		l.emit(tokLOr)
 	default:
-		l.emit(TokPipe)
+		l.emit(tokPipe)
 	}
 	return lexDefault
 }
@@ -120,18 +190,18 @@ func lexArg(l *lexer) lexFn {
 	for {
 		switch r := l.next(); {
 		case r == '\\':
-			r, err := escape(l.next())
+			r, err := escapeRune(l.next())
 			if err != nil {
 				l.errorf("%s", err)
 			}
 			sb.WriteRune(r)
-		case r == ']' && l.brktDepth > 0:
+		case r == ']' && l.bracketDepth > 0:
 			l.backup()
-			l.Out <- Token{TokArg, sb.String()}
+			l.out <- token{tokArg, sb.String()}
 			return lexDefault
-		case unicode.IsSpace(r) || IsMetaChar(r) || IsEol(r) || r == eof:
+		case unicode.IsSpace(r) || isMetachar(r) || isEol(r) || r == eof:
 			l.backup()
-			l.Out <- Token{TokArg, sb.String()}
+			l.out <- token{tokArg, sb.String()}
 			return lexMaybeConcat
 		default:
 			sb.WriteRune(r)
@@ -143,19 +213,19 @@ func lexVarRef(l *lexer) lexFn {
 	l.next() // Consume ‘$’
 
 	// Flat or not?
-	kind := TokVarRef
+	kind := tokVarRef
 	if l.inQuotes {
-		kind = TokVarFlat
+		kind = tokVarFlat
 	}
 	switch l.peek() {
 	case '^':
 		if l.inQuotes {
 			return l.errorf("The ‘^’ variable prefix is redundant in double-quoted strings")
 		}
-		kind = TokVarFlat
+		kind = tokVarFlat
 		l.next()
 	case '#':
-		kind = TokVarLen
+		kind = tokVarLen
 		l.next()
 	}
 
@@ -168,7 +238,7 @@ func lexVarRef(l *lexer) lexFn {
 	l.start = l.pos
 
 	l.pos += strings.IndexFunc(l.input[l.pos:], func(r rune) bool {
-		return !IsRefChar(r)
+		return !isRefRune(r)
 	})
 	if l.pos < l.start {
 		l.pos = len(l.input)
@@ -184,9 +254,9 @@ func lexVarRef(l *lexer) lexFn {
 	}
 
 	if l.peek() == '[' {
-		l.emit(TokBkOpen)
+		l.emit(tokBracketOpen)
 		l.next()
-		l.brktDepth++
+		l.bracketDepth++
 		return lexDefault
 	}
 	if l.inQuotes {
@@ -205,7 +275,7 @@ func lexStringSingle(l *lexer) lexFn {
 		return l.errorf("unterminated string")
 	}
 
-	l.emit(TokString)
+	l.emit(tokString)
 	l.pos += n
 	return lexMaybeConcat
 }
@@ -213,7 +283,7 @@ func lexStringSingle(l *lexer) lexFn {
 func lexStringDouble(l *lexer) lexFn {
 	// Consume quote
 	if l.inQuotes {
-		l.emit(TokConcat)
+		l.emit(tokConcat)
 		l.inQuotes = false
 	} else {
 		l.next()
@@ -225,7 +295,7 @@ func lexStringDouble(l *lexer) lexFn {
 		case eof:
 			return l.errorf("unterminated string")
 		case '\\':
-			r, err := escape(l.next())
+			r, err := escapeRune(l.next())
 			if err != nil {
 				l.errorf("%s", err)
 			}
@@ -235,7 +305,7 @@ func lexStringDouble(l *lexer) lexFn {
 			l.inQuotes = true
 			fallthrough
 		case '"':
-			l.Out <- Token{TokString, sb.String()}
+			l.out <- token{tokString, sb.String()}
 			return lexMaybeConcat
 		default:
 			sb.WriteRune(r)
@@ -246,21 +316,21 @@ func lexStringDouble(l *lexer) lexFn {
 func lexMaybeConcat(l *lexer) lexFn {
 	switch r := l.peek(); {
 	case r == '\'':
-		l.emit(TokConcat)
+		l.emit(tokConcat)
 		return lexStringSingle
 	case r == '"':
-		l.emit(TokConcat)
+		l.emit(tokConcat)
 		return lexStringDouble
 	case r == '(':
-		l.emit(TokConcat)
+		l.emit(tokConcat)
 		return lexDefault
 	case r == '$':
-		l.emit(TokConcat)
+		l.emit(tokConcat)
 		return lexVarRef
-	case unicode.IsSpace(r) || IsMetaChar(r) || IsEol(r) || r == eof:
+	case unicode.IsSpace(r) || isMetachar(r) || isEol(r) || r == eof:
 		return lexDefault
 	}
-	l.emit(TokConcat)
+	l.emit(tokConcat)
 	return lexArg
 }
 
@@ -268,20 +338,20 @@ func lexWrite(l *lexer) lexFn {
 	switch l.peek() {
 	case '!':
 		l.next()
-		l.emit(TokClobber)
+		l.emit(tokClobber)
 	case '>':
 		l.next()
-		l.emit(TokAppend)
+		l.emit(tokAppend)
 	default:
-		l.emit(TokWrite)
+		l.emit(tokWrite)
 	}
 	return lexDefault
 }
 
-func escape(r rune) (rune, error) {
-	if unicode.IsSpace(r) || IsMetaChar(r) {
+func escapeRune(r rune) (rune, error) {
+	if unicode.IsSpace(r) || isMetachar(r) {
 		return r, nil
-	} else if r, ok := escapes[r]; ok {
+	} else if r, ok := stringEscapes[r]; ok {
 		return r, nil
 	}
 	return -1, errors.New(fmt.Sprintf("invalid escape sequence ‘\\%c’", r))

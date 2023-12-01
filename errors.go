@@ -1,4 +1,4 @@
-package vm
+package main
 
 import (
 	"fmt"
@@ -13,9 +13,9 @@ type commandResult interface {
 }
 
 type errFileOp struct {
-	desc string // Attempted action on file (‘open’, ‘stat’, etc.)
-	file string // File related to the error
-	err  error  // Error that caused this
+	desc string
+	file string
+	err  error
 }
 
 func (e errFileOp) Error() string {
@@ -23,7 +23,7 @@ func (e errFileOp) Error() string {
 }
 
 type errClobber struct {
-	file string // File related to the error
+	file string
 }
 
 func (e errClobber) Error() string {
@@ -46,7 +46,7 @@ func (e errInternal) Error() string {
 }
 
 type errExpected struct {
-	want, got string
+	want, got any
 }
 
 func (e errExpected) Error() string {
@@ -76,6 +76,6 @@ func (_ errFileOp) isShellError()      {}
 func (_ errInternal) isShellError()    {}
 func (_ errUnsupported) isShellError() {}
 
-func failed(e commandResult) bool {
+func cmdFailed(e commandResult) bool {
 	return e.ExitCode() != 0
 }

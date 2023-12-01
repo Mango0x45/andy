@@ -1,4 +1,4 @@
 .POSIX:
 
 repl:
-	@rlwrap -H .andy-hist -- go run main.go
+	@find . -name '*.go' -not -name '*_test.go' -exec rlwrap -H .andy-hist -- go run {} +

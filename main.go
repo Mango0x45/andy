@@ -6,30 +6,26 @@ import (
 	"fmt"
 	"io"
 	"os"
-
-	"git.sr.ht/~mango/andy/lexer"
-	"git.sr.ht/~mango/andy/parser"
-	"git.sr.ht/~mango/andy/vm"
 )
 
 func main() {
 	switch len(os.Args) {
 	case 1:
-		repl()
+		runRepl()
 	case 2:
-		file(os.Args[1])
+		runFile(os.Args[1])
 	default:
 		fmt.Fprintln(os.Stderr, "Usage: andy [file]")
 		os.Exit(1)
 	}
 }
 
-func repl() {
+func runRepl() {
+	vm := vm{interactive: true}
 	r := bufio.NewReader(os.Stdin)
-	vm.Interactive = true
 
 	for {
-		fmt.Fprintf(os.Stderr, "[%d] > ", vm.Status)
+		fmt.Fprintf(os.Stderr, "[%d] > ", vm.status)
 		line, err := r.ReadString('\n')
 
 		switch {
@@ -37,29 +33,34 @@ func repl() {
 			fmt.Fprintln(os.Stderr, "^D")
 			os.Exit(0)
 		case err != nil:
-			eprintln(err)
+			warn(err)
 		}
 
-		l := lexer.New(line)
-		p := parser.New(l.Out)
-		go l.Run()
-		vm.Run(p.Run())
+		l := newLexer(line)
+		p := newParser(l.out)
+		go l.run()
+		vm.run(p.run())
 	}
 }
 
-func file(f string) {
+func runFile(f string) {
+	vm := vm{}
 	bytes, err := os.ReadFile(f)
 	if err != nil {
-		eprintln(err)
-		os.Exit(1)
+		die(err)
 	}
 
-	l := lexer.New(string(bytes))
-	p := parser.New(l.Out)
-	go l.Run()
-	vm.Run(p.Run())
+	l := newLexer(string(bytes))
+	p := newParser(l.out)
+	go l.run()
+	vm.run(p.run())
 }
 
-func eprintln(e error) {
+func warn(e error) {
 	fmt.Fprintf(os.Stderr, "andy: %s\n", e)
+}
+
+func die(e error) {
+	fmt.Fprintf(os.Stderr, "andy: %s\n", e)
+	os.Exit(1)
 }

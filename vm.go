@@ -1,14 +1,8 @@
-package vm
+package main
 
 import (
-	"fmt"
 	"io"
 	"os"
-)
-
-var (
-	Status      uint8
-	Interactive bool
 )
 
 type context struct {
@@ -16,17 +10,22 @@ type context struct {
 	out, err io.Writer
 }
 
-func Run(prog Program) {
+type vm struct {
+	status      uint8
+	interactive bool
+}
+
+func (vm *vm) run(prog astProgram) {
 	for _, cl := range prog {
 		ret := execCmdList(cl, context{
 			os.Stdin,
 			os.Stdout,
 			os.Stderr,
 		})
-		Status = ret.ExitCode()
+		vm.status = ret.ExitCode()
 		if _, ok := ret.(shellError); ok {
-			fmt.Fprintf(os.Stderr, "andy: %s\n", ret)
-			if !Interactive {
+			warn(ret)
+			if !vm.interactive {
 				os.Exit(1)
 			}
 		}
