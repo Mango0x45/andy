@@ -252,12 +252,35 @@ outer:
 }
 
 func cmdSet(cmd *exec.Cmd) uint8 {
-	if len(cmd.Args) == 1 {
-		fmt.Fprintf(cmd.Stderr, "Usage: set variable [value ...]\n")
+	var eflag bool
+
+	usage := func() uint8 {
+		fmt.Fprintln(cmd.Stderr, "Usage: set variable [value ...]\n"+
+			"       set -e variable value")
 		return 1
 	}
 
-	ident := cmd.Args[1]
+	flags, optind, err := opts.GetLong(cmd.Args, []opts.LongOpt{
+		{Short: 'e', Long: "environment", Arg: opts.None},
+	})
+	if err != nil {
+		cmdErrorf(cmd, "%s", err)
+		return usage()
+	}
+
+	for _, f := range flags {
+		switch f.Key {
+		case 'e':
+			eflag = true
+		}
+	}
+
+	cmd.Args = cmd.Args[optind:]
+	if len(cmd.Args) == 0 || eflag && len(cmd.Args) > 2 {
+		return usage()
+	}
+
+	ident := cmd.Args[0]
 	for _, r := range ident {
 		if !isRefRune(r) {
 			cmdErrorf(cmd, "rune ‘%c’ is not allowed in variable names", r)
@@ -265,10 +288,21 @@ func cmdSet(cmd *exec.Cmd) uint8 {
 		}
 	}
 
-	if len(cmd.Args) == 2 {
+	switch {
+	case eflag && len(cmd.Args) == 1:
+		if err := os.Unsetenv(ident); err != nil {
+			cmdErrorf(cmd, "%s", err)
+			return 1
+		}
+	case eflag:
+		if err := os.Setenv(ident, cmd.Args[1]); err != nil {
+			cmdErrorf(cmd, "%s", err)
+			return 1
+		}
+	case len(cmd.Args) == 1:
 		delete(varMap, ident)
-	} else {
-		varMap[ident] = cmd.Args[2:]
+	default:
+		varMap[ident] = cmd.Args[1:]
 	}
 
 	return 0
