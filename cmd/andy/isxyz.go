@@ -40,23 +40,23 @@ func isRefName(s string) (bool, rune) {
 	return true, 0
 }
 
-func isRedirTok(kind tokenKind) bool {
-	return kind == tokAppend ||
-		kind == tokClobber ||
-		kind == tokRead ||
-		kind == tokWrite
+func isRedirTok(k tokenKind) bool {
+	return k == tokAppend ||
+		k == tokClobber ||
+		k == tokRead ||
+		k == tokWrite
 }
 
-func isValueTok(kind tokenKind) bool {
-	return kind == tokArg ||
-		kind == tokConcat ||
-		kind == tokParenOpen ||
-		kind == tokProcRdWr ||
-		kind == tokProcRead ||
-		kind == tokProcSub ||
-		kind == tokProcWrite ||
-		kind == tokString ||
-		kind == tokVarFlat ||
-		kind == tokVarLen ||
-		kind == tokVarRef
+func isValueTok(k tokenKind) bool {
+	return k == tokArg ||
+		k == tokConcat ||
+		k == tokParenOpen ||
+		k == tokProcRdWr ||
+		k == tokProcRead ||
+		k == tokProcSub ||
+		k == tokProcWrite ||
+		k == tokString ||
+		k == tokVarFlat ||
+		k == tokVarLen ||
+		k == tokVarRef
 }
