@@ -27,7 +27,7 @@ func runRepl() {
 	globalVm.interactive = true
 
 	for {
-		fmt.Fprintf(os.Stderr, "[%d] > ", globalVm.status)
+		fmt.Fprintf(os.Stderr, "[%s] > ", globalVariableMap["status"][0])
 		line, err := r.ReadString('\n')
 
 		switch {

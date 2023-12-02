@@ -221,7 +221,7 @@ func getIndex(s string, n int) (int, commandResult) {
 func (vr astVarRef) toStrings(ctx context) ([]string, commandResult) {
 	xs, ok := ctx.scope[vr.ident]
 	if !ok {
-		xs, ok = varMap[vr.ident]
+		xs, ok = globalVariableMap[vr.ident]
 	}
 	if !ok {
 		if x, ok := os.LookupEnv(vr.ident); ok {

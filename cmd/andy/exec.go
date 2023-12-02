@@ -48,7 +48,7 @@ func execFuncDef(fd astFuncDef, ctx context) commandResult {
 	}
 
 	f := function{args: args[1:], body: fd.body}
-	funcMap[args[0]] = f
+	globalFuncMap[args[0]] = f
 
 	return errExitCode(0)
 }
@@ -276,7 +276,7 @@ func execSimple(cmd *astSimple, ctx context) commandResult {
 		}
 	}
 
-	if f, ok := funcMap[c.Args[0]]; ok {
+	if f, ok := globalFuncMap[c.Args[0]]; ok {
 		ctx.scope = copyMap(ctx.scope)
 		args := c.Args[1:]
 		for i, a := range f.args {

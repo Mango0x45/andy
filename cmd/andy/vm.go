@@ -3,6 +3,7 @@ package main
 import (
 	"io"
 	"os"
+	"strconv"
 )
 
 type context struct {
@@ -12,7 +13,6 @@ type context struct {
 }
 
 type vm struct {
-	status      uint8
 	interactive bool
 }
 
@@ -22,9 +22,17 @@ type function struct {
 }
 
 var (
-	funcMap map[string]function = make(map[string]function, 64)
-	varMap  map[string][]string = make(map[string][]string, 64)
+	globalFuncMap     map[string]function
+	globalVariableMap map[string][]string
 )
+
+func init() {
+	globalFuncMap = make(map[string]function, 64)
+	globalVariableMap = make(map[string][]string, 64)
+
+	globalVariableMap["status"] = []string{"0"}
+	globalVariableMap["pid"] = []string{strconv.Itoa(os.Getpid())}
+}
 
 func (vm *vm) run(prog astProgram) {
 	for _, tl := range prog {
@@ -34,7 +42,8 @@ func (vm *vm) run(prog astProgram) {
 			os.Stderr,
 			nil,
 		})
-		vm.status = ret.ExitCode()
+		code := int(ret.ExitCode())
+		globalVariableMap["status"] = []string{strconv.Itoa(code)}
 		if _, ok := ret.(shellError); ok {
 			warn(ret)
 			if !vm.interactive {

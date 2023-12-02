@@ -288,7 +288,7 @@ func cmdSet(cmd *exec.Cmd, ctx context) uint8 {
 	}
 
 	if gflag || ctx.scope == nil {
-		scope = varMap
+		scope = globalVariableMap
 	}
 
 	cmd.Args = cmd.Args[optind:]
