@@ -30,6 +30,7 @@ type lexer struct {
 	width        int
 	bracketDepth int
 	inQuotes     bool
+	inProcBraces bool
 }
 
 type lexFn func(*lexer) lexFn
@@ -102,15 +103,19 @@ func lexDefault(l *lexer) lexFn {
 
 		case strings.HasPrefix(l.input[l.pos-l.width:], "`{"):
 			l.pos += 1
+			l.inProcBraces = true
 			l.emit(tokProcSub)
 		case strings.HasPrefix(l.input[l.pos-l.width:], "<{"):
 			l.pos += 1
+			l.inProcBraces = true
 			l.emit(tokProcRead)
 		case strings.HasPrefix(l.input[l.pos-l.width:], ">{"):
 			l.pos += 1
+			l.inProcBraces = true
 			l.emit(tokProcWrite)
 		case strings.HasPrefix(l.input[l.pos-l.width:], "<>{"):
 			l.pos += 2
+			l.inProcBraces = true
 			l.emit(tokProcRdWr)
 
 		case r == '&':
@@ -131,6 +136,10 @@ func lexDefault(l *lexer) lexFn {
 			l.emit(tokBraceOpen)
 		case r == '}':
 			l.emit(tokBraceClose)
+			if l.inProcBraces {
+				l.inProcBraces = false
+				return lexMaybeConcat
+			}
 		case r == '(':
 			l.emit(tokParenOpen)
 		case r == ')':
