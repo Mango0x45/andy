@@ -242,9 +242,20 @@ func execSimple(cmd *astSimple, ctx context) commandResult {
 			return err
 		}
 		args = append(args, ss...)
-		if pr, ok := v.(*astProcRedir); ok {
+
+		// Cringe code duplication, but it works
+		switch v.(type) {
+		case *astProcRedir:
+			pr := v.(*astProcRedir)
 			extras = append(extras, pr.openFiles()...)
 			defer pr.Close()
+		case astList:
+			for _, x := range v.(astList) {
+				if pr, ok := x.(*astProcRedir); ok {
+					extras = append(extras, pr.openFiles()...)
+					defer pr.Close()
+				}
+			}
 		}
 	}
 

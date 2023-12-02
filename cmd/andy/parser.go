@@ -309,19 +309,13 @@ func (p *parser) parseList() astList {
 	var xs astList
 
 	for {
-		switch t := p.next(); t.kind {
-		case tokParenClose:
+		switch t := p.peek(); {
+		case t.kind == tokParenClose:
+			p.next()
 			return xs
-		case tokArg:
-			xs = append(xs, astArgument(t.val))
-		case tokString:
-			xs = append(xs, astString(t.val))
-		case tokVarRef, tokVarFlat, tokVarLen:
-			xs = append(xs, newVarRef(t))
-		case tokParenOpen:
-			xs = append(xs, p.parseList()...)
-		default:
-			die(errExpected{"list item", t})
+		case !isValueTok(t.kind):
+			die(errExpected{"value", t})
 		}
+		xs = append(xs, p.parseValue())
 	}
 }
