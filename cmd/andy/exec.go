@@ -281,7 +281,7 @@ func execSimple(cmd *astSimple, ctx context) commandResult {
 		return execTopLevels(f.body, ctx)
 	}
 	if f, ok := builtins[c.Args[0]]; ok {
-		return errExitCode(f(c))
+		return errExitCode(f(c, ctx))
 	}
 	switch err := c.Run(); err.(type) {
 	case nil:

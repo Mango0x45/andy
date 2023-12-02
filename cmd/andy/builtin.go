@@ -16,7 +16,7 @@ import (
 	"git.sr.ht/~mango/opts"
 )
 
-type builtin func(cmd *exec.Cmd) uint8
+type builtin func(cmd *exec.Cmd, ctx context) uint8
 
 type stack []string
 
@@ -52,7 +52,7 @@ func (s *stack) pop() (string, bool) {
 	return d, true
 }
 
-func cmdDot(cmd *exec.Cmd) uint8 {
+func cmdDot(cmd *exec.Cmd, _ context) uint8 {
 	if len(cmd.Args) == 1 {
 		cmd.Args = append(cmd.Args, "-")
 	}
@@ -79,7 +79,7 @@ func cmdDot(cmd *exec.Cmd) uint8 {
 	return 0
 }
 
-func cmdCd(cmd *exec.Cmd) uint8 {
+func cmdCd(cmd *exec.Cmd, _ context) uint8 {
 	var dst string
 	switch len(cmd.Args) {
 	case 1:
@@ -127,7 +127,7 @@ func cdPop(cmd *exec.Cmd) uint8 {
 	return 0
 }
 
-func cmdCmd(cmd *exec.Cmd) uint8 {
+func cmdCmd(cmd *exec.Cmd, _ context) uint8 {
 	if len(cmd.Args) < 2 {
 		fmt.Fprintln(cmd.Stderr, "Usage: cmd command [args ...]")
 		return 1
@@ -146,7 +146,7 @@ func cmdCmd(cmd *exec.Cmd) uint8 {
 	return uint8(code)
 }
 
-func cmdEcho(cmd *exec.Cmd) uint8 {
+func cmdEcho(cmd *exec.Cmd, _ context) uint8 {
 	// Cast to []any
 	args := make([]any, len(cmd.Args)-1)
 	for i := range args {
@@ -157,11 +157,11 @@ func cmdEcho(cmd *exec.Cmd) uint8 {
 	return 0
 }
 
-func cmdFalse(cmd *exec.Cmd) uint8 {
+func cmdFalse(_ *exec.Cmd, _ context) uint8 {
 	return 1
 }
 
-func cmdRead(cmd *exec.Cmd) uint8 {
+func cmdRead(cmd *exec.Cmd, ctx context) uint8 {
 	usage := func() uint8 {
 		fmt.Fprintln(cmd.Stderr, "Usage: read [-D] [-n num] [-d string] variable")
 		return 1
@@ -243,14 +243,14 @@ outer:
 
 	cmd.Args = append([]string{"read"}, cmd.Args[0])
 	cmd.Args = append(cmd.Args, parts...)
-	res := cmdSet(cmd)
+	res := cmdSet(cmd, ctx)
 	if len(parts) == 0 {
 		return 1
 	}
 	return res
 }
 
-func cmdSet(cmd *exec.Cmd) uint8 {
+func cmdSet(cmd *exec.Cmd, _ context) uint8 {
 	var eflag bool
 
 	usage := func() uint8 {
@@ -307,7 +307,7 @@ func cmdSet(cmd *exec.Cmd) uint8 {
 	return 0
 }
 
-func cmdTrue(cmd *exec.Cmd) uint8 {
+func cmdTrue(_ *exec.Cmd, _ context) uint8 {
 	return 0
 }
 
