@@ -200,8 +200,8 @@ func cmdRead(cmd *exec.Cmd, ctx context) uint8 {
 		}
 	}
 
-	cmd.Args = cmd.Args[optind:]
-	if len(cmd.Args) != 1 {
+	rest := cmd.Args[optind:]
+	if len(rest) != 1 {
 		return usage()
 	}
 
@@ -245,8 +245,8 @@ outer:
 		}
 	}
 
-	ident := cmd.Args[0]
-	cmd.Args = []string{"read"}
+	ident := rest[0]
+	cmd.Args = cmd.Args[0:1]
 	if gflag {
 		cmd.Args = append(cmd.Args, "-g")
 	}
@@ -291,34 +291,32 @@ func cmdSet(cmd *exec.Cmd, ctx context) uint8 {
 		scope = globalVariableMap
 	}
 
-	cmd.Args = cmd.Args[optind:]
-	if len(cmd.Args) == 0 || eflag && len(cmd.Args) > 2 || eflag && gflag {
+	rest := cmd.Args[optind:]
+	if len(rest) == 0 || eflag && len(rest) > 2 || eflag && gflag {
 		return usage()
 	}
 
-	ident := cmd.Args[0]
-	for _, r := range ident {
-		if !isRefRune(r) {
-			cmdErrorf(cmd, "rune ‘%c’ is not allowed in variable names", r)
-			return 1
-		}
+	ident := rest[0]
+	if ok, r := isRefName(ident); !ok {
+		cmdErrorf(cmd, "rune ‘%c’ is not allowed in variable names", r)
+		return 1
 	}
 
 	switch {
-	case eflag && len(cmd.Args) == 1:
+	case eflag && len(rest) == 1:
 		if err := os.Unsetenv(ident); err != nil {
 			cmdErrorf(cmd, "%s", err)
 			return 1
 		}
 	case eflag:
-		if err := os.Setenv(ident, cmd.Args[1]); err != nil {
+		if err := os.Setenv(ident, rest[1]); err != nil {
 			cmdErrorf(cmd, "%s", err)
 			return 1
 		}
-	case len(cmd.Args) == 1:
+	case len(rest) == 1:
 		delete(scope, ident)
 	default:
-		scope[ident] = cmd.Args[1:]
+		scope[ident] = rest[1:]
 	}
 
 	return 0
