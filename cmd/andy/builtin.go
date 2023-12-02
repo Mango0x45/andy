@@ -22,7 +22,7 @@ type stack []string
 
 var (
 	builtins      map[string]builtin
-	dirStack      stack = make([]string, 0, 64)
+	dirStack      stack    = make([]string, 0, 64)
 	reservedNames []string = []string{"pid", "status"}
 )
 
@@ -33,6 +33,7 @@ func init() {
 		"cmd":   cmdCmd,
 		"echo":  cmdEcho,
 		"false": cmdFalse,
+		"quote": cmdQuote,
 		"read":  cmdRead,
 		"set":   cmdSet,
 		"true":  cmdTrue,
@@ -160,6 +161,15 @@ func cmdEcho(cmd *exec.Cmd, _ context) uint8 {
 
 func cmdFalse(_ *exec.Cmd, _ context) uint8 {
 	return 1
+}
+
+func cmdQuote(cmd *exec.Cmd, _ context) uint8 {
+	for _, arg := range cmd.Args[1:] {
+		n := longestRunBytes(arg, '\'')
+		s := strings.Repeat("'", n+1)
+		fmt.Fprintln(cmd.Stdout, s+arg+s)
+	}
+	return 0
 }
 
 func cmdRead(cmd *exec.Cmd, ctx context) uint8 {

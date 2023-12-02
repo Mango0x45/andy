@@ -43,6 +43,7 @@ a while.  The currently implemented features are:
 - [X] Source scripts (`. file…`)
 - [X] Define functions with named arguments (`func f arg1 … {…}`)
 - [X] Function-local- and global variables (`set -g …; read -g …`)
+- [X] Quote arguments using Andy quoting rules (`quote …`)
 
 ## Example
 
