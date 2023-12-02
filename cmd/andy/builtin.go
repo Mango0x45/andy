@@ -21,8 +21,9 @@ type builtin func(cmd *exec.Cmd, ctx context) uint8
 type stack []string
 
 var (
-	builtins map[string]builtin
-	dirStack stack = make([]string, 0, 64)
+	builtins      map[string]builtin
+	dirStack      stack = make([]string, 0, 64)
+	reservedNames []string = []string{"pid", "status"}
 )
 
 func init() {
@@ -297,6 +298,10 @@ func cmdSet(cmd *exec.Cmd, ctx context) uint8 {
 	}
 
 	ident := rest[0]
+	if slices.Contains(reservedNames, ident) {
+		cmdErrorf(cmd, "the ‘%s’ variable is read-only", ident)
+		return 1
+	}
 	if ok, r := isRefName(ident); !ok {
 		cmdErrorf(cmd, "rune ‘%c’ is not allowed in variable names", r)
 		return 1
