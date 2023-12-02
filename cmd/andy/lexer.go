@@ -142,6 +142,9 @@ func lexDefault(l *lexer) lexFn {
 			l.emit(tokBraceClose)
 			if l.inProcBraces {
 				l.inProcBraces = false
+				if l.inQuotes {
+					return lexStringDouble
+				}
 				return lexMaybeConcat
 			}
 		case r == '(':
@@ -338,6 +341,12 @@ func lexStringDouble(l *lexer) lexFn {
 				l.errorf("%s", err)
 			}
 			sb.WriteRune(r)
+		case '`':
+			if l.peek() != '{' {
+				sb.WriteRune(r)
+				break
+			}
+			fallthrough
 		case '$':
 			l.backup()
 			l.inQuotes = true
