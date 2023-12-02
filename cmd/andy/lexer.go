@@ -352,27 +352,49 @@ func lexStringDouble(l *lexer) lexFn {
 }
 
 func lexMaybeConcat(l *lexer) lexFn {
-	switch r := l.peek(); {
-	case strings.HasPrefix(l.input[l.pos:], "r#"):
-		l.emit(tokConcat)
-		return lexStringRaw
-	case r == '\'':
-		l.emit(tokConcat)
-		return lexStringSingle
-	case r == '"':
-		l.emit(tokConcat)
-		return lexStringDouble
-	case r == '(':
-		l.emit(tokConcat)
-		return lexDefault
-	case r == '$':
-		l.emit(tokConcat)
-		return lexVarRef
-	case unicode.IsSpace(r) || isMetachar(r) || isEol(r) || r == eof:
+	r := l.peek()
+	if unicode.IsSpace(r) || isEol(r) || isClosing(r) || r == eof {
 		return lexDefault
 	}
+
 	l.emit(tokConcat)
-	return lexArg
+	switch r := l.peek(); {
+	case strings.HasPrefix(l.input[l.pos:], "`{"):
+		l.pos += 2
+		l.inProcBraces = true
+		l.emit(tokProcSub)
+		return lexDefault
+	case strings.HasPrefix(l.input[l.pos:], "<{"):
+		l.pos += 2
+		l.inProcBraces = true
+		l.emit(tokProcRead)
+		return lexDefault
+	case strings.HasPrefix(l.input[l.pos:], ">{"):
+		l.pos += 2
+		l.inProcBraces = true
+		l.emit(tokProcWrite)
+		return lexDefault
+	case strings.HasPrefix(l.input[l.pos:], "<>{"):
+		l.pos += 3
+		l.inProcBraces = true
+		l.emit(tokProcRdWr)
+		return lexDefault
+	case strings.HasPrefix(l.input[l.pos:], "r#"):
+		return lexStringRaw
+	case r == '\'':
+		return lexStringSingle
+	case r == '"':
+		return lexStringDouble
+	case r == '(':
+		return lexDefault
+	case r == '$':
+		return lexVarRef
+	case r == '`':
+		l.out <- token{tokString, "`"}
+		l.next()
+		return lexMaybeConcat
+	}
+	return lexDefault
 }
 
 func lexWrite(l *lexer) lexFn {
