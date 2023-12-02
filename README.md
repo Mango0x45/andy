@@ -44,6 +44,7 @@ a while.  The currently implemented features are:
 - [X] Define functions with named arguments (`func f arg1 … {…}`)
 - [X] Function-local- and global variables (`set -g …; read -g …`)
 - [X] Quote arguments using Andy quoting rules (`quote …`)
+- [X] Raw strings (`r#c…c#`)
 
 ## Example
 

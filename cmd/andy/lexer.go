@@ -118,16 +118,20 @@ func lexDefault(l *lexer) lexFn {
 			l.inProcBraces = true
 			l.emit(tokProcRdWr)
 
-		case r == '&':
-			return lexAmp
-		case r == '|':
-			return lexPipe
+		case strings.HasPrefix(l.input[l.pos-l.width:], "r#"):
+			l.backup()
+			return lexStringRaw
 		case r == '\'':
 			l.backup()
 			return lexStringSingle
 		case r == '"':
 			l.backup()
 			return lexStringDouble
+
+		case r == '&':
+			return lexAmp
+		case r == '|':
+			return lexPipe
 		case r == '<':
 			l.emit(tokRead)
 		case r == '>':
@@ -274,18 +278,43 @@ func lexVarRef(l *lexer) lexFn {
 	return lexMaybeConcat
 }
 
-func lexStringSingle(l *lexer) lexFn {
-	start := l.pos
-	n := l.acceptRun('\'')
+func lexStringRaw(l *lexer) lexFn {
+	l.next() // Consume ‘r’
+	n := l.acceptRun('#')
+	r := l.next()
 	l.start = l.pos
+	var pos int
 
-	l.pos += strings.Index(l.input[l.pos:], l.input[start:start+n])
+	for {
+		i := strings.IndexRune(l.input[l.pos:], r)
+		if i == -1 {
+			return l.errorf("unterminated string")
+		}
+		l.pos += i + 1
+		pos = l.pos - 1
+		m := l.acceptRun('#')
+		if m == n {
+			break
+		}
+		l.pos += m
+	}
+
+	tmp := l.pos
+	l.pos = pos
+	l.emit(tokString)
+	l.pos = tmp
+	return lexMaybeConcat
+}
+
+func lexStringSingle(l *lexer) lexFn {
+	l.next() // Consume quote
+	l.start = l.pos
+	l.pos += strings.IndexByte(l.input[l.pos:], '\'')
 	if l.pos < l.start {
 		return l.errorf("unterminated string")
 	}
-
 	l.emit(tokString)
-	l.pos += n
+	l.next()
 	return lexMaybeConcat
 }
 
@@ -324,6 +353,9 @@ func lexStringDouble(l *lexer) lexFn {
 
 func lexMaybeConcat(l *lexer) lexFn {
 	switch r := l.peek(); {
+	case strings.HasPrefix(l.input[l.pos:], "r#"):
+		l.emit(tokConcat)
+		return lexStringRaw
 	case r == '\'':
 		l.emit(tokConcat)
 		return lexStringSingle

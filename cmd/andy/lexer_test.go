@@ -91,7 +91,7 @@ func TestEmitTokenTypes1(t *testing.T) {
 	cmd <file >file
 	| another-cmd -f >> "foo.bar" -v
 
-	| cmd  <there <is <a <''nob'reak'' < space < there`
+	| cmd  <there <is <a <r#.nob'reak.# < space < there`
 
 	assertTokens(t, xs, getTokens(s))
 }
