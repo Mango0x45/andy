@@ -267,7 +267,7 @@ func execSimple(cmd *astSimple, ctx context) commandResult {
 	}
 
 	if f, ok := funcMap[c.Args[0]]; ok {
-		ctx.scope = make(map[string][]string, len(f.args))
+		ctx.scope = copyMap(ctx.scope)
 		args := c.Args[1:]
 		for i, a := range f.args {
 			if i >= len(args) {

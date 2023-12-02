@@ -162,14 +162,17 @@ func cmdFalse(_ *exec.Cmd, _ context) uint8 {
 }
 
 func cmdRead(cmd *exec.Cmd, ctx context) uint8 {
+	var Dflag, gflag bool
+
 	usage := func() uint8 {
-		fmt.Fprintln(cmd.Stderr, "Usage: read [-D] [-n num] [-d string] variable")
+		fmt.Fprintln(cmd.Stderr, "Usage: read [-Dg] [-n num] [-d string] variable")
 		return 1
 	}
 
 	flags, optind, err := opts.GetLong(cmd.Args, []opts.LongOpt{
 		{Short: 'd', Long: "delimiters", Arg: opts.Required},
 		{Short: 'D', Long: "no-empty", Arg: opts.None},
+		{Short: 'g', Long: "global", Arg: opts.None},
 		{Short: 'n', Long: "count", Arg: opts.Required},
 	})
 	if err != nil {
@@ -178,14 +181,15 @@ func cmdRead(cmd *exec.Cmd, ctx context) uint8 {
 	}
 
 	var ds []byte
-	var noEmpty bool
 	cnt := math.MaxInt
 	for _, f := range flags {
 		switch f.Key {
 		case 'd':
 			ds = []byte(f.Value)
 		case 'D':
-			noEmpty = true
+			Dflag = true
+		case 'g':
+			gflag = true
 		case 'n':
 			n, err := strconv.Atoi(f.Value)
 			if err != nil {
@@ -228,7 +232,7 @@ outer:
 		}
 	}
 
-	if noEmpty {
+	if Dflag {
 		parts = slices.DeleteFunc(parts, func(s string) bool {
 			return s == ""
 		})
@@ -241,7 +245,12 @@ outer:
 		}
 	}
 
-	cmd.Args = append([]string{"read"}, cmd.Args[0])
+	ident := cmd.Args[0]
+	cmd.Args = []string{"read"}
+	if gflag {
+		cmd.Args = append(cmd.Args, "-g")
+	}
+	cmd.Args = append(cmd.Args, ident)
 	cmd.Args = append(cmd.Args, parts...)
 	res := cmdSet(cmd, ctx)
 	if len(parts) == 0 {
@@ -250,17 +259,19 @@ outer:
 	return res
 }
 
-func cmdSet(cmd *exec.Cmd, _ context) uint8 {
-	var eflag bool
+func cmdSet(cmd *exec.Cmd, ctx context) uint8 {
+	var eflag, gflag bool
+	scope := ctx.scope
 
 	usage := func() uint8 {
-		fmt.Fprintln(cmd.Stderr, "Usage: set variable [value ...]\n"+
+		fmt.Fprintln(cmd.Stderr, "Usage: set [-g] variable [value ...]\n"+
 			"       set -e variable [value]")
 		return 1
 	}
 
 	flags, optind, err := opts.GetLong(cmd.Args, []opts.LongOpt{
 		{Short: 'e', Long: "environment", Arg: opts.None},
+		{Short: 'g', Long: "global", Arg: opts.None},
 	})
 	if err != nil {
 		cmdErrorf(cmd, "%s", err)
@@ -271,11 +282,17 @@ func cmdSet(cmd *exec.Cmd, _ context) uint8 {
 		switch f.Key {
 		case 'e':
 			eflag = true
+		case 'g':
+			gflag = true
 		}
 	}
 
+	if gflag || ctx.scope == nil {
+		scope = varMap
+	}
+
 	cmd.Args = cmd.Args[optind:]
-	if len(cmd.Args) == 0 || eflag && len(cmd.Args) > 2 {
+	if len(cmd.Args) == 0 || eflag && len(cmd.Args) > 2 || eflag && gflag {
 		return usage()
 	}
 
@@ -299,9 +316,9 @@ func cmdSet(cmd *exec.Cmd, _ context) uint8 {
 			return 1
 		}
 	case len(cmd.Args) == 1:
-		delete(varMap, ident)
+		delete(scope, ident)
 	default:
-		varMap[ident] = cmd.Args[1:]
+		scope[ident] = cmd.Args[1:]
 	}
 
 	return 0

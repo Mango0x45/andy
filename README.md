@@ -42,6 +42,7 @@ a while.  The currently implemented features are:
 - [X] Read stdin into array (`cmd | read var`)
 - [X] Source scripts (`. file…`)
 - [X] Define functions with named arguments (`func f arg1 … {…}`)
+- [X] Function-local- and global variables (`set -g …; read -g …`)
 
 ## Example
 
