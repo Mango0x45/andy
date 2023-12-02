@@ -165,9 +165,11 @@ func cmdFalse(_ *exec.Cmd, _ context) uint8 {
 
 func cmdQuote(cmd *exec.Cmd, _ context) uint8 {
 	for _, arg := range cmd.Args[1:] {
-		n := longestRunBytes(arg, '\'')
-		s := strings.Repeat("'", n+1)
-		fmt.Fprintln(cmd.Stdout, s+arg+s)
+		s := "'#"
+		for strings.Contains(arg, s) {
+			s += string('#')
+		}
+		fmt.Fprintf(cmd.Stdout, "r%s'%s%s\n", s[1:], arg, s)
 	}
 	return 0
 }
