@@ -131,6 +131,7 @@ func newRedir(k tokenKind) astRedirect {
 
 type astValue interface {
 	toStrings(ctx context) ([]string, commandResult)
+	io.Closer
 }
 
 type astArgument string
@@ -232,6 +233,7 @@ func (vr astVarRef) toStrings(ctx context) ([]string, commandResult) {
 		ys := make([]string, 0, len(xs))
 		for _, i := range vr.indices {
 			ss, err := i.toStrings(ctx)
+			defer i.Close()
 			if err != nil {
 				return nil, err
 			}
@@ -358,17 +360,6 @@ func (pr *astProcRedir) toStrings(ctx context) ([]string, commandResult) {
 	return xs, nil
 }
 
-func (pr astProcRedir) Close() error {
-	var e1, e2 error
-	if pr.is(procRead) {
-		e1 = pr.r.Close()
-	}
-	if pr.is(procWrite) {
-		e2 = pr.w.Close()
-	}
-	return errors.Join(e1, e2)
-}
-
 func (pr astProcRedir) openFiles() []*os.File {
 	var xs []*os.File
 	if pr.is(procRead) {
@@ -394,6 +385,31 @@ const (
 	procRead procRedirKind = 1 << iota
 	procWrite
 )
+
+func (_ astArgument) Close() error { return nil }
+func (_ astString) Close() error   { return nil }
+func (_ astVarRef) Close() error   { return nil }
+func (_ astProcSub) Close() error  { return nil }
+func (c astConcat) Close() error {
+	return errors.Join(c.lhs.Close(), c.rhs.Close())
+}
+func (xs astList) Close() error {
+	errs := make([]error, len(xs))
+	for i, x := range xs {
+		errs[i] = x.Close()
+	}
+	return errors.Join(errs...)
+}
+func (pr astProcRedir) Close() error {
+	var e1, e2 error
+	if pr.is(procRead) {
+		e1 = pr.r.Close()
+	}
+	if pr.is(procWrite) {
+		e2 = pr.w.Close()
+	}
+	return errors.Join(e1, e2)
+}
 
 type astBinaryOp int
 

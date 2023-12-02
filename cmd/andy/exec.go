@@ -248,15 +248,14 @@ func execSimple(cmd *astSimple, ctx context) commandResult {
 		case *astProcRedir:
 			pr := v.(*astProcRedir)
 			extras = append(extras, pr.openFiles()...)
-			defer pr.Close()
 		case astList:
 			for _, x := range v.(astList) {
 				if pr, ok := x.(*astProcRedir); ok {
 					extras = append(extras, pr.openFiles()...)
-					defer pr.Close()
 				}
 			}
 		}
+		defer v.Close()
 	}
 
 	// You might try to run the empty list
