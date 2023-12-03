@@ -313,6 +313,8 @@ func (p *parser) parseList() astList {
 		case t.kind == tokParenClose:
 			p.next()
 			return xs
+		case t.kind == tokEndStmt:
+			p.next()
 		case !isValueTok(t.kind):
 			die(errExpected{"value", t})
 		}

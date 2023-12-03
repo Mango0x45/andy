@@ -6,6 +6,8 @@ import (
 	"strings"
 	"unicode"
 	"unicode/utf8"
+
+	"git.sr.ht/~mango/andy/pkg/stack"
 )
 
 var stringEscapes = map[rune]rune{
@@ -22,6 +24,13 @@ var stringEscapes = map[rune]rune{
 
 const eof rune = -1
 
+type nestState int
+
+const (
+	inQuotes nestState = iota
+	inProcBraces
+)
+
 type lexer struct {
 	input        string
 	out          chan token
@@ -29,8 +38,7 @@ type lexer struct {
 	start        int
 	width        int
 	bracketDepth int
-	inQuotes     bool
-	inProcBraces bool
+	s            stack.Stack[nestState]
 }
 
 type lexFn func(*lexer) lexFn
@@ -39,6 +47,7 @@ func newLexer(s string) lexer {
 	return lexer{
 		input: s,
 		out:   make(chan token),
+		s:     stack.New[nestState](4),
 	}
 }
 
@@ -103,19 +112,19 @@ func lexDefault(l *lexer) lexFn {
 
 		case strings.HasPrefix(l.input[l.pos-l.width:], "`{"):
 			l.pos += 1
-			l.inProcBraces = true
+			l.s.Push(inProcBraces)
 			l.emit(tokProcSub)
 		case strings.HasPrefix(l.input[l.pos-l.width:], "<{"):
 			l.pos += 1
-			l.inProcBraces = true
+			l.s.Push(inProcBraces)
 			l.emit(tokProcRead)
 		case strings.HasPrefix(l.input[l.pos-l.width:], ">{"):
 			l.pos += 1
-			l.inProcBraces = true
+			l.s.Push(inProcBraces)
 			l.emit(tokProcWrite)
 		case strings.HasPrefix(l.input[l.pos-l.width:], "<>{"):
 			l.pos += 2
-			l.inProcBraces = true
+			l.s.Push(inProcBraces)
 			l.emit(tokProcRdWr)
 
 		case strings.HasPrefix(l.input[l.pos-l.width:], "r#"):
@@ -140,9 +149,9 @@ func lexDefault(l *lexer) lexFn {
 			l.emit(tokBraceOpen)
 		case r == '}':
 			l.emit(tokBraceClose)
-			if l.inProcBraces {
-				l.inProcBraces = false
-				if l.inQuotes {
+			if s := l.s.Peek(); s != nil && *s == inProcBraces {
+				l.s.Pop()
+				if s := l.s.Peek(); s != nil && *s == inQuotes {
 					return lexStringDouble
 				}
 				return lexMaybeConcat
@@ -155,7 +164,7 @@ func lexDefault(l *lexer) lexFn {
 		case r == ']' && l.bracketDepth > 0:
 			l.emit(tokBracketClose)
 			l.bracketDepth--
-			if l.inQuotes {
+			if s := l.s.Peek(); s != nil && *s == inQuotes {
 				return lexStringDouble
 			}
 			return lexMaybeConcat
@@ -230,12 +239,12 @@ func lexVarRef(l *lexer) lexFn {
 
 	// Flat or not?
 	kind := tokVarRef
-	if l.inQuotes {
+	if s := l.s.Peek(); s != nil && *s == inQuotes {
 		kind = tokVarFlat
 	}
 	switch l.peek() {
 	case '^':
-		if l.inQuotes {
+		if s := l.s.Peek(); s != nil && *s == inQuotes {
 			return l.errorf("The ‘^’ variable prefix is redundant in double-quoted strings")
 		}
 		kind = tokVarFlat
@@ -275,10 +284,15 @@ func lexVarRef(l *lexer) lexFn {
 		l.bracketDepth++
 		return lexDefault
 	}
-	if l.inQuotes {
+	switch s := l.s.Peek(); {
+	case s == nil:
+		return lexMaybeConcat
+	case *s == inProcBraces:
+		return lexDefault
+	case *s == inQuotes:
 		return lexStringDouble
 	}
-	return lexMaybeConcat
+	panic("unreachable")
 }
 
 func lexStringRaw(l *lexer) lexFn {
@@ -323,9 +337,9 @@ func lexStringSingle(l *lexer) lexFn {
 
 func lexStringDouble(l *lexer) lexFn {
 	// Consume quote
-	if l.inQuotes {
+	if s := l.s.Peek(); s != nil && *s == inQuotes {
 		l.emit(tokConcat)
-		l.inQuotes = false
+		l.s.Pop()
 	} else {
 		l.next()
 	}
@@ -349,7 +363,7 @@ func lexStringDouble(l *lexer) lexFn {
 			fallthrough
 		case '$':
 			l.backup()
-			l.inQuotes = true
+			l.s.Push(inQuotes)
 			fallthrough
 		case '"':
 			l.out <- token{tokString, sb.String()}
@@ -370,22 +384,22 @@ func lexMaybeConcat(l *lexer) lexFn {
 	switch r := l.peek(); {
 	case strings.HasPrefix(l.input[l.pos:], "`{"):
 		l.pos += 2
-		l.inProcBraces = true
+		l.s.Push(inProcBraces)
 		l.emit(tokProcSub)
 		return lexDefault
 	case strings.HasPrefix(l.input[l.pos:], "<{"):
 		l.pos += 2
-		l.inProcBraces = true
+		l.s.Push(inProcBraces)
 		l.emit(tokProcRead)
 		return lexDefault
 	case strings.HasPrefix(l.input[l.pos:], ">{"):
 		l.pos += 2
-		l.inProcBraces = true
+		l.s.Push(inProcBraces)
 		l.emit(tokProcWrite)
 		return lexDefault
 	case strings.HasPrefix(l.input[l.pos:], "<>{"):
 		l.pos += 3
-		l.inProcBraces = true
+		l.s.Push(inProcBraces)
 		l.emit(tokProcRdWr)
 		return lexDefault
 	case strings.HasPrefix(l.input[l.pos:], "r#"):

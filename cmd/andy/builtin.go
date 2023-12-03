@@ -13,17 +13,16 @@ import (
 	"strconv"
 	"strings"
 
+	"git.sr.ht/~mango/andy/pkg/stack"
 	"git.sr.ht/~mango/opts"
 )
 
 type builtin func(cmd *exec.Cmd, ctx context) uint8
 
-type stack []string
-
 var (
 	builtins      map[string]builtin
-	dirStack      stack    = make([]string, 0, 64)
-	reservedNames []string = []string{"pid", "status"}
+	dirStack      stack.Stack[string] = stack.New[string](64)
+	reservedNames []string            = []string{"pid", "status"}
 )
 
 func init() {
@@ -38,20 +37,6 @@ func init() {
 		"set":   cmdSet,
 		"true":  cmdTrue,
 	}
-}
-
-func (s *stack) push(dir string) {
-	*s = append(*s, dir)
-}
-
-func (s *stack) pop() (string, bool) {
-	if len(*s) == 0 {
-		return "", false
-	}
-	n := len(*s) - 1
-	d := (*s)[n]
-	*s = (*s)[:n]
-	return d, true
 }
 
 func cmdDot(cmd *exec.Cmd, _ context) uint8 {
@@ -104,11 +89,11 @@ func cmdCd(cmd *exec.Cmd, _ context) uint8 {
 	if cwd, err := os.Getwd(); err != nil {
 		cmdErrorf(cmd, "%s", err)
 	} else {
-		dirStack.push(cwd)
+		dirStack.Push(cwd)
 	}
 
 	if err := os.Chdir(dst); err != nil {
-		dirStack.pop()
+		dirStack.Pop()
 		cmdErrorf(cmd, "%s", err)
 		return 1
 	}
@@ -116,13 +101,13 @@ func cmdCd(cmd *exec.Cmd, _ context) uint8 {
 }
 
 func cdPop(cmd *exec.Cmd) uint8 {
-	dst, ok := dirStack.pop()
-	if !ok {
+	dst := dirStack.Pop()
+	if dst == nil {
 		cmdErrorf(cmd, "the directory stack is empty")
 		return 1
 	}
 
-	if err := os.Chdir(dst); err != nil {
+	if err := os.Chdir(*dst); err != nil {
 		cmdErrorf(cmd, "%s", err)
 		return 1
 	}

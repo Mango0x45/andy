@@ -30,6 +30,7 @@ func init() {
 	globalFuncMap = make(map[string]function, 64)
 	globalVariableMap = make(map[string][]string, 64)
 
+	globalVariableMap["_"] = []string{} // Other shells export this
 	globalVariableMap["status"] = []string{"0"}
 	globalVariableMap["pid"] = []string{strconv.Itoa(os.Getpid())}
 }

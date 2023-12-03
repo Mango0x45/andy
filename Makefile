@@ -5,7 +5,7 @@ andy: $(wildcard cmd/andy/*.go)
 	go build ./cmd/andy
 
 repl:
-	find . -name '*.go' -not -name '*_test.go' -exec \
+	find cmd/andy -name '*.go' -not -name '*_test.go' -exec \
 		rlwrap -H .andy-hist -- go run {} +
 
 install:
