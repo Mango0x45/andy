@@ -210,14 +210,16 @@ func (p *parser) parseBody() []astTopLevel {
 	xs := []astTopLevel{}
 
 	for {
-		switch t := p.peek(); t.kind {
-		case tokEndStmt:
+		switch t := p.peek(); {
+		case t.kind == tokEndStmt:
 			p.next()
-		case tokBraceClose:
+		case t.kind == tokBraceClose:
 			p.next()
 			return xs
-		case tokEof:
+		case t.kind == tokEof:
 			die(errExpected{"closing brace", t})
+		case t.kind == tokArg && t.val == "func":
+			xs = append(xs, p.parseFuncDef())
 		default:
 			xs = append(xs, p.parseCommandList())
 		}
