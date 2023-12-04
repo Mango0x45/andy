@@ -12,6 +12,7 @@ import (
 	"slices"
 	"strconv"
 	"strings"
+	"syscall"
 
 	"git.sr.ht/~mango/andy/pkg/stack"
 	"git.sr.ht/~mango/opts"
@@ -31,6 +32,7 @@ func init() {
 		"call":  cmdCall,
 		"cd":    cmdCd,
 		"echo":  cmdEcho,
+		"exec":  cmdExec,
 		"exit":  cmdExit,
 		"false": cmdFalse,
 		"quote": cmdQuote,
@@ -188,6 +190,19 @@ func cmdEcho(cmd *exec.Cmd, _ context) uint8 {
 
 	fmt.Fprintln(cmd.Stdout, args...)
 	return 0
+}
+
+func cmdExec(cmd *exec.Cmd, _ context) uint8 {
+	if len(cmd.Args) < 2 {
+		fmt.Fprintln(cmd.Stderr, "Usage: exec program [arguments ...]")
+		return 1
+	}
+	argv0, err := exec.LookPath(cmd.Args[1])
+	if err != nil && !errors.Is(err, exec.ErrDot) {
+		return cmdErrorf(cmd, "unable to find ‘%s’ in $PATH", cmd.Args[1])
+	}
+	err = syscall.Exec(argv0, cmd.Args[1:], cmd.Environ())
+	return cmdErrorf(cmd, "failed to exec ‘%s’: %s", cmd.Args[1], err)
 }
 
 func cmdExit(cmd *exec.Cmd, _ context) uint8 {
@@ -396,7 +411,8 @@ func cmdTrue(_ *exec.Cmd, _ context) uint8 {
 	return 0
 }
 
-func cmdErrorf(cmd *exec.Cmd, format string, args ...any) {
+func cmdErrorf(cmd *exec.Cmd, format string, args ...any) uint8 {
 	format = fmt.Sprintf("%s: %s\n", cmd.Args[0], format)
 	fmt.Fprintf(cmd.Stderr, format, args...)
+	return 1
 }

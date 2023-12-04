@@ -27,6 +27,7 @@ a while.  The currently implemented features are:
 - [X] `echo` builtin function
 - [X] `true` builtin function
 - [X] `false` builtin function
+- [X] `exec` builtin function
 - [X] Value lists (`(a b …)`)
 - [X] String concationation (`foo'bar'"baz"`)
 - [X] Cartesian product list concationation (`(foo bar).c; (a b)(c d)`)
@@ -48,6 +49,7 @@ a while.  The currently implemented features are:
 - [X] `exit` builtin function
 - [X] Special read-only variables (`$cdstack`, `$pid`, `$ppid`, `$status`)
 - [X] For-loops with implicit assignment (`for … { echo $_ }`)
+- [X] For-in-loops (`for x in … { echo $x }`)
 - [X] Shorthand process substitution syntax (``​`cmd …``)
 
 ## Example
