@@ -1,5 +1,6 @@
 set xs 1 2 3
 set ys 0 1 2
+set zs 3 2 1
 
 echo $xs[ 0]
 echo $xs[ 1]
@@ -9,10 +10,11 @@ echo $xs[foo] || echo 'bad index' >!/dev/stderr
 echo $xs[-2]
 echo $(xs)[-1]
 echo $xs[342423843272572843] || echo 'out of range' >!/dev/stderr
-true $xs[]  # Passing args triggers a diagnostic
 printf %s\\n $xs[ $ys ]
 printf %s\\n $^xs[ $ys ]
 printf %s\\n $^xs[ -$xs ]
 echo $^xs[0 0 0 0 0]
 echo $#xs[(0 1) (0 1) (2 0)]
 echo $(xs)[0 2](.c .o)
+echo $zs[]
+echo $(zs)[]
