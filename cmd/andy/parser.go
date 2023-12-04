@@ -295,7 +295,7 @@ func (p *parser) parseValue() astValue {
 }
 
 func (p *parser) parseIndices() []astValue {
-	var xs []astValue
+	xs := []astValue{}
 	p.next() // Consume ‘[’
 	for isValueTok(p.peek().kind) {
 		xs = append(xs, p.parseValue())
