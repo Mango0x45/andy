@@ -23,6 +23,8 @@ func main() {
 }
 
 func runRepl() {
+	runFile(".andyrc")
+
 	r := bufio.NewReader(os.Stdin)
 	globalVm.interactive = true
 
