@@ -225,6 +225,18 @@ func execWhile(cmd *astWhile, ctx context) commandResult {
 }
 
 func execFor(cmd *astFor, ctx context) commandResult {
+	defer cmd.bind.Close()
+	binds, res := cmd.bind.toStrings(ctx)
+	if cmdFailed(res) {
+		return res
+	}
+	if len(binds) > 1 {
+		return errInternal{errors.New("tried to bind multiple variables in for-loop")}
+	} else if len(binds) == 0 {
+		return errInternal{errors.New("tried to bind variables to nothing in for-loop")}
+	}
+	bind := binds[0]
+
 	for _, v := range cmd.vals {
 		ss, res := v.toStrings(ctx)
 		defer v.Close()
@@ -235,7 +247,7 @@ func execFor(cmd *astFor, ctx context) commandResult {
 		for _, s := range ss {
 			ctx := ctx
 			ctx.scope = copyMap(ctx.scope)
-			ctx.scope["_"] = []string{s}
+			ctx.scope[bind] = []string{s}
 			if res := execTopLevels(cmd.body, ctx); cmdFailed(res) {
 				return res
 			}

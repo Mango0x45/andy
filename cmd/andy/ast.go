@@ -87,6 +87,7 @@ type astWhile struct {
 }
 
 type astFor struct {
+	bind astValue
 	vals []astValue
 	body []astTopLevel
 	rs   []astRedirect

@@ -182,14 +182,34 @@ func (p *parser) parseWhile() *astWhile {
 }
 
 func (p *parser) parseFor() *astFor {
-	var f astFor
-	for isValueTok(p.peek().kind) {
-		f.vals = append(f.vals, p.parseValue())
+	var (
+		f      astFor
+		bind   astValue
+		doBind bool
+	)
+
+	for i := 0; isValueTok(p.peek().kind); i++ {
+		switch t := p.peek(); {
+		case i == 0:
+			bind = p.parseValue()
+		case i == 1 && t.kind == tokArg && t.val == "in":
+			doBind = true
+			p.next()
+		default:
+			f.vals = append(f.vals, p.parseValue())
+		}
 	}
+
+	if !doBind {
+		f.vals = append([]astValue{bind}, f.vals...)
+		bind = astArgument("_")
+	}
+
 	if t := p.next(); t.kind != tokBraceOpen {
 		die(errExpected{"opening brace", t})
 	}
 	f.body = p.parseBody()
+	f.bind = bind
 	return &f
 }
 
