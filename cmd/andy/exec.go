@@ -133,10 +133,10 @@ func execCommand(cc astCleanCommand, ctx context) commandResult {
 				name = os.DevNull
 			case re.kind == redirWrite:
 				info, err := os.Stat(name)
-				if err != nil {
+				switch {
+				case err != nil && !errors.Is(err, os.ErrNotExist):
 					return errInternal{err}
-				}
-				if !info.Mode().IsRegular() {
+				case err == nil && !info.Mode().IsRegular():
 					re.kind = redirClob
 				}
 			}
