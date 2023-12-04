@@ -149,9 +149,9 @@ func lexDefault(l *lexer) lexFn {
 			l.emit(tokBraceOpen)
 		case r == '}':
 			l.emit(tokBraceClose)
-			if s := l.s.Peek(); s != nil && *s == inProcBraces {
+			if l.s.TopIs(inProcBraces) {
 				l.s.Pop()
-				if s := l.s.Peek(); s != nil && *s == inQuotes {
+				if l.s.TopIs(inQuotes) {
 					return lexStringDouble
 				}
 				return lexMaybeConcat
@@ -164,7 +164,7 @@ func lexDefault(l *lexer) lexFn {
 		case r == ']' && l.bracketDepth > 0:
 			l.emit(tokBracketClose)
 			l.bracketDepth--
-			if s := l.s.Peek(); s != nil && *s == inQuotes {
+			if l.s.TopIs(inQuotes) {
 				return lexStringDouble
 			}
 			return lexMaybeConcat
@@ -239,12 +239,12 @@ func lexVarRef(l *lexer) lexFn {
 
 	// Flat or not?
 	kind := tokVarRef
-	if s := l.s.Peek(); s != nil && *s == inQuotes {
+	if l.s.TopIs(inQuotes) {
 		kind = tokVarFlat
 	}
 	switch l.peek() {
 	case '^':
-		if s := l.s.Peek(); s != nil && *s == inQuotes {
+		if l.s.TopIs(inQuotes) {
 			return l.errorf("The ‘^’ variable prefix is redundant in double-quoted strings")
 		}
 		kind = tokVarFlat
@@ -284,15 +284,13 @@ func lexVarRef(l *lexer) lexFn {
 		l.bracketDepth++
 		return lexDefault
 	}
-	switch s := l.s.Peek(); {
-	case s == nil:
-		return lexMaybeConcat
-	case *s == inProcBraces:
+	switch {
+	case l.s.TopIs(inProcBraces):
 		return lexDefault
-	case *s == inQuotes:
+	case l.s.TopIs(inQuotes):
 		return lexStringDouble
 	}
-	panic("unreachable")
+	return lexMaybeConcat
 }
 
 func lexStringRaw(l *lexer) lexFn {
@@ -337,7 +335,7 @@ func lexStringSingle(l *lexer) lexFn {
 
 func lexStringDouble(l *lexer) lexFn {
 	// Consume quote
-	if s := l.s.Peek(); s != nil && *s == inQuotes {
+	if l.s.TopIs(inQuotes) {
 		l.emit(tokConcat)
 		l.s.Pop()
 	} else {

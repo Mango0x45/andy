@@ -1,10 +1,10 @@
 package stack
 
-type Stack[T any] struct {
+type Stack[T comparable] struct {
 	xs []T
 }
 
-func New[T any](n int) Stack[T] {
+func New[T comparable](n int) Stack[T] {
 	return Stack[T]{make([]T, 0, n)}
 }
 
@@ -27,4 +27,9 @@ func (s *Stack[T]) Pop() *T {
 	x := s.xs[n]
 	s.xs = s.xs[:n]
 	return &x
+}
+
+func (s *Stack[T]) TopIs(x T) bool {
+	y := s.Peek()
+	return y != nil && x == *y
 }
