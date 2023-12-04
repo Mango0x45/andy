@@ -1,7 +1,7 @@
 PREFIX = /usr/local
 
 all: andy
-andy: $(wildcard cmd/andy/*.go)
+andy: $(wildcard cmd/andy/*.go) $(wildcard pkg/*/*.go)
 	go build ./cmd/andy
 
 repl:

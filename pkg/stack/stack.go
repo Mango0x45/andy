@@ -1,31 +1,29 @@
 package stack
 
-type Stack[T comparable] struct {
-	xs []T
-}
+type Stack[T comparable] []T
 
 func New[T comparable](n int) Stack[T] {
-	return Stack[T]{make([]T, 0, n)}
+	return make(Stack[T], 0, n)
 }
 
 func (s *Stack[T]) Push(x T) {
-	s.xs = append(s.xs, x)
+	*s = append(*s, x)
 }
 
 func (s Stack[T]) Peek() *T {
-	if len(s.xs) == 0 {
+	if len(s) == 0 {
 		return nil
 	}
-	return &s.xs[len(s.xs)-1]
+	return &s[len(s)-1]
 }
 
 func (s *Stack[T]) Pop() *T {
-	if len(s.xs) == 0 {
+	if len(*s) == 0 {
 		return nil
 	}
-	n := len(s.xs) - 1
-	x := s.xs[n]
-	s.xs = s.xs[:n]
+	n := len(*s) - 1
+	x := (*s)[n]
+	*s = (*s)[:n]
 	return &x
 }
 

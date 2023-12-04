@@ -20,10 +20,9 @@ import (
 type builtin func(cmd *exec.Cmd, ctx context) uint8
 
 var (
-	builtins map[string]builtin
-	dirStack stack.Stack[string] = stack.New[string](64)
-
-	reservedNames []string = []string{"pid", "ppid", "status"}
+	builtins      map[string]builtin
+	dirStack      = stack.New[string](64)
+	reservedNames = []string{"cdstack", "pid", "ppid", "status"}
 )
 
 func init() {
@@ -129,6 +128,10 @@ func cmdCall(cmd *exec.Cmd, ctx context) uint8 {
 }
 
 func cmdCd(cmd *exec.Cmd, _ context) uint8 {
+	defer func() {
+		globalVariableMap["cdstack"] = dirStack
+	}()
+
 	var dst string
 	switch len(cmd.Args) {
 	case 1:

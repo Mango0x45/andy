@@ -46,7 +46,7 @@ a while.  The currently implemented features are:
 - [X] Quote arguments using Andy quoting rules (`quote …`)
 - [X] Raw strings (`r#c…c#`)
 - [X] `exit` builtin function
-- [X] Special read-only variables (`$pid`, `$ppid`, `$status`)
+- [X] Special read-only variables (`$cdstack`, `$pid`, `$ppid`, `$status`)
 
 ## Example
 
