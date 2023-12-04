@@ -23,7 +23,7 @@ a while.  The currently implemented features are:
 - [X] Pipelines (`cmd1 | … | cmdN`)
 - [X] Condition chains (`cmd1 && … || cmdN`)
 - [X] `cd` builtin function with `pushd/popd` behaviour
-- [X] `cmd` builtin function
+- [X] `call` builtin function
 - [X] `echo` builtin function
 - [X] `true` builtin function
 - [X] `false` builtin function

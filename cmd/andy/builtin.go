@@ -28,8 +28,8 @@ var (
 func init() {
 	builtins = map[string]builtin{
 		".":     cmdDot,
+		"call":  cmdCall,
 		"cd":    cmdCd,
-		"cmd":   cmdCmd,
 		"echo":  cmdEcho,
 		"exit":  cmdExit,
 		"false": cmdFalse,
@@ -65,6 +65,66 @@ func cmdDot(cmd *exec.Cmd, _ context) uint8 {
 		globalVm.run(p.run())
 	}
 	return 0
+}
+
+func cmdCall(cmd *exec.Cmd, ctx context) uint8 {
+	var bflag, cflag bool
+	usage := func() uint8 {
+		fmt.Fprintln(cmd.Stderr, "Usage: call [-bc] command [args ...]")
+		return 1
+	}
+
+	flags, optind, err := opts.GetLong(cmd.Args, []opts.LongOpt{
+		{Short: 'b', Long: "builtin", Arg: opts.None},
+		{Short: 'c', Long: "command", Arg: opts.None},
+	})
+	if err != nil {
+		cmdErrorf(cmd, "%s", err)
+		return usage()
+	}
+
+	for _, f := range flags {
+		switch f.Key {
+		case 'b':
+			bflag = true
+		case 'c':
+			cflag = true
+		}
+	}
+
+	rest := cmd.Args[optind:]
+	if len(rest) == 0 {
+		return usage()
+	}
+	f, xs := rest[0], rest[1:]
+
+	if !bflag && !cflag {
+		bflag = true
+		cflag = true
+	}
+
+	if bflag {
+		if b, ok := builtins[f]; ok {
+			cmd.Args = rest
+			return b(cmd, ctx)
+		}
+	}
+
+	if cflag {
+		c := exec.Command(f, xs...)
+		c.Stdin, c.Stdout, c.Stderr = cmd.Stdin, cmd.Stdout, cmd.Stderr
+		c.ExtraFiles = cmd.ExtraFiles
+		err = c.Run()
+		code := c.ProcessState.ExitCode()
+
+		if err != nil && code == -1 {
+			cmdErrorf(cmd, "%s", err)
+			return 1
+		}
+		return uint8(code)
+	}
+
+	return 1
 }
 
 func cmdCd(cmd *exec.Cmd, _ context) uint8 {
@@ -113,25 +173,6 @@ func cdPop(cmd *exec.Cmd) uint8 {
 		return 1
 	}
 	return 0
-}
-
-func cmdCmd(cmd *exec.Cmd, _ context) uint8 {
-	if len(cmd.Args) < 2 {
-		fmt.Fprintln(cmd.Stderr, "Usage: cmd command [args ...]")
-		return 1
-	}
-
-	c := exec.Command(cmd.Args[1], cmd.Args[2:]...)
-	c.Stdin, c.Stdout, c.Stderr = cmd.Stdin, cmd.Stdout, cmd.Stderr
-	c.ExtraFiles = cmd.ExtraFiles
-	err := c.Run()
-	code := c.ProcessState.ExitCode()
-
-	if err != nil && code == -1 {
-		cmdErrorf(cmd, "%s", err)
-		return 1
-	}
-	return uint8(code)
 }
 
 func cmdEcho(cmd *exec.Cmd, _ context) uint8 {
