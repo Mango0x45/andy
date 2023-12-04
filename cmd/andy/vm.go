@@ -33,6 +33,7 @@ func init() {
 	globalVariableMap["_"] = []string{} // Other shells export this
 	globalVariableMap["status"] = []string{"0"}
 	globalVariableMap["pid"] = []string{strconv.Itoa(os.Getpid())}
+	globalVariableMap["ppid"] = []string{strconv.Itoa(os.Getppid())}
 }
 
 func (vm *vm) run(prog astProgram) {

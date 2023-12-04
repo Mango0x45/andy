@@ -20,9 +20,10 @@ import (
 type builtin func(cmd *exec.Cmd, ctx context) uint8
 
 var (
-	builtins      map[string]builtin
-	dirStack      stack.Stack[string] = stack.New[string](64)
-	reservedNames []string            = []string{"pid", "status"}
+	builtins map[string]builtin
+	dirStack stack.Stack[string] = stack.New[string](64)
+
+	reservedNames []string = []string{"pid", "ppid", "status"}
 )
 
 func init() {
