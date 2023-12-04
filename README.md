@@ -45,6 +45,7 @@ a while.  The currently implemented features are:
 - [X] Function-local- and global variables (`set -g …; read -g …`)
 - [X] Quote arguments using Andy quoting rules (`quote …`)
 - [X] Raw strings (`r#c…c#`)
+- [X] `exit` builtin function
 
 ## Example
 

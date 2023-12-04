@@ -31,6 +31,7 @@ func init() {
 		"cd":    cmdCd,
 		"cmd":   cmdCmd,
 		"echo":  cmdEcho,
+		"exit":  cmdExit,
 		"false": cmdFalse,
 		"quote": cmdQuote,
 		"read":  cmdRead,
@@ -142,6 +143,28 @@ func cmdEcho(cmd *exec.Cmd, _ context) uint8 {
 
 	fmt.Fprintln(cmd.Stdout, args...)
 	return 0
+}
+
+func cmdExit(cmd *exec.Cmd, _ context) uint8 {
+	lo, hi := 0, math.MaxUint8
+
+	var n int
+	if len(cmd.Args) > 1 {
+		var err error
+		s := cmd.Args[1]
+		n, err = strconv.Atoi(s)
+		switch {
+		case errors.Is(err, strconv.ErrRange) || n < lo || n > hi:
+			cmdErrorf(cmd, "exit code ‘%s’ must be in the range %d–%d", s, lo, hi)
+			return 1
+		case err != nil:
+			cmdErrorf(cmd, "‘%s’ isn’t a valid integer", s)
+			return 1
+		}
+	}
+
+	os.Exit(n)
+	panic("unreachable")
 }
 
 func cmdFalse(_ *exec.Cmd, _ context) uint8 {
