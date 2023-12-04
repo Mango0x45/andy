@@ -53,8 +53,9 @@ already outdated.
 
 ```andy
 # Define a function ‘greet’ that takes an argument ‘name’
-fn greet name
+func greet name {
     echo "Hello $name!"
+}
 
 # Multiline pipelines without newline escaping
 grep foo /some/path
@@ -63,7 +64,7 @@ grep foo /some/path
 
 # Conditionals and writing to stderr
 if test $# -lt 1 {
-    echo "Usage: $0 [-f] pattern [file ...]" >!
+    echo "Usage: $0 [-f] pattern [file ...]" >&2
     exit 1
 }
 
@@ -71,10 +72,10 @@ if test $# -lt 1 {
 cat <_
 cat >_
 
-# Explicit file clobbering with ‘>|’
+# Explicit file clobbering with ‘>!’
 echo hello >my-file
 echo hello >my-file   # Fails
-echo hello >|my-file  # Succeeds
+echo hello >!my-file  # Succeeds
 
 # Pattern match strings, with implicit breaks and explicit fallthroughs
 x = 123
@@ -106,5 +107,5 @@ cat $xs   # Read the files ‘foo bar’ and ‘baz’
 cat $^xs  # Read the file ‘foo bar baz’
 
 # Process substitution
-diff <(cmd1) <(cmd2)
+diff <{cmd1} <{cmd2}
 ```

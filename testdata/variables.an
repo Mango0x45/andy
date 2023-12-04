@@ -4,9 +4,9 @@ set xs foo bar baz
 printf %s\\n $xs.c $^xs.c $#xs.c
 
 set foo bar
-echo ${foo}b
+echo $(foo)b
 
-echo "That ${foo}b was sharp"
+echo "That $(foo)b was sharp"
 
 echo (1 2 $#xs)
 set xs′ $xs

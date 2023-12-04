@@ -254,10 +254,10 @@ func lexVarRef(l *lexer) lexFn {
 		l.next()
 	}
 
-	// Optional surrounding braces
-	braces := false
-	if l.peek() == '{' {
-		braces = true
+	// Optional surrounding parens
+	parens := false
+	if l.peek() == '(' {
+		parens = true
 		l.next()
 	}
 	l.start = l.pos
@@ -269,12 +269,12 @@ func lexVarRef(l *lexer) lexFn {
 		l.pos = len(l.input)
 	}
 
-	if braces && l.peek() != '}' {
-		return l.errorf("unterminated braced variable ‘${%s’",
+	if parens && l.peek() != ')' {
+		return l.errorf("unterminated variable ‘$(%s’",
 			l.input[l.start:l.pos])
 	}
 	l.emit(kind)
-	if braces {
+	if parens {
 		l.next() // Consume closing brace
 	}
 
