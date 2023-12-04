@@ -10,13 +10,6 @@ func (s *Stack[T]) Push(x T) {
 	*s = append(*s, x)
 }
 
-func (s Stack[T]) Peek() *T {
-	if len(s) == 0 {
-		return nil
-	}
-	return &s[len(s)-1]
-}
-
 func (s *Stack[T]) Pop() *T {
 	if len(*s) == 0 {
 		return nil
