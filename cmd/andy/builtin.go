@@ -57,8 +57,7 @@ func cmdDot(cmd *exec.Cmd, _ context) uint8 {
 		}
 
 		if err != nil {
-			cmdErrorf(cmd, "%s", err)
-			return 1
+			return cmdErrorf(cmd, "%s", err)
 		}
 
 		l := newLexer(string(buf))
@@ -120,8 +119,7 @@ func cmdCall(cmd *exec.Cmd, ctx context) uint8 {
 		code := c.ProcessState.ExitCode()
 
 		if err != nil && code == -1 {
-			cmdErrorf(cmd, "%s", err)
-			return 1
+			return cmdErrorf(cmd, "%s", err)
 		}
 		return uint8(code)
 	}
@@ -139,8 +137,7 @@ func cmdCd(cmd *exec.Cmd, _ context) uint8 {
 	case 1:
 		user, err := user.Current()
 		if err != nil {
-			cmdErrorf(cmd, "%s", err)
-			return 1
+			return cmdErrorf(cmd, "%s", err)
 		}
 		dst = user.HomeDir
 	case 2:
@@ -161,8 +158,7 @@ func cmdCd(cmd *exec.Cmd, _ context) uint8 {
 
 	if err := os.Chdir(dst); err != nil {
 		dirStack.Pop()
-		cmdErrorf(cmd, "%s", err)
-		return 1
+		return cmdErrorf(cmd, "%s", err)
 	}
 	return 0
 }
@@ -170,13 +166,11 @@ func cmdCd(cmd *exec.Cmd, _ context) uint8 {
 func cdPop(cmd *exec.Cmd) uint8 {
 	dst := dirStack.Pop()
 	if dst == nil {
-		cmdErrorf(cmd, "the directory stack is empty")
-		return 1
+		return cmdErrorf(cmd, "the directory stack is empty")
 	}
 
 	if err := os.Chdir(*dst); err != nil {
-		cmdErrorf(cmd, "%s", err)
-		return 1
+		return cmdErrorf(cmd, "%s", err)
 	}
 	return 0
 }
@@ -215,11 +209,9 @@ func cmdExit(cmd *exec.Cmd, _ context) uint8 {
 		n, err = strconv.Atoi(s)
 		switch {
 		case errors.Is(err, strconv.ErrRange) || n < lo || n > hi:
-			cmdErrorf(cmd, "exit code ‘%s’ must be in the range %d–%d", s, lo, hi)
-			return 1
+			return cmdErrorf(cmd, "exit code ‘%s’ must be in the range %d–%d", s, lo, hi)
 		case err != nil:
-			cmdErrorf(cmd, "‘%s’ isn’t a valid integer", s)
-			return 1
+			return cmdErrorf(cmd, "‘%s’ isn’t a valid integer", s)
 		}
 	}
 
@@ -299,8 +291,7 @@ outer:
 			}
 			break outer
 		case err != nil:
-			cmdErrorf(cmd, "%s", err)
-			return 1
+			return cmdErrorf(cmd, "%s", err)
 		}
 
 		b := buf[0]
@@ -379,24 +370,20 @@ func cmdSet(cmd *exec.Cmd, ctx context) uint8 {
 
 	ident := rest[0]
 	if slices.Contains(reservedNames, ident) {
-		cmdErrorf(cmd, "the ‘%s’ variable is read-only", ident)
-		return 1
+		return cmdErrorf(cmd, "the ‘%s’ variable is read-only", ident)
 	}
 	if ok, r := isRefName(ident); !ok {
-		cmdErrorf(cmd, "rune ‘%c’ is not allowed in variable names", r)
-		return 1
+		return cmdErrorf(cmd, "rune ‘%c’ is not allowed in variable names", r)
 	}
 
 	switch {
 	case eflag && len(rest) == 1:
 		if err := os.Unsetenv(ident); err != nil {
-			cmdErrorf(cmd, "%s", err)
-			return 1
+			return cmdErrorf(cmd, "%s", err)
 		}
 	case eflag:
 		if err := os.Setenv(ident, rest[1]); err != nil {
-			cmdErrorf(cmd, "%s", err)
-			return 1
+			return cmdErrorf(cmd, "%s", err)
 		}
 	case len(rest) == 1:
 		delete(scope, ident)
