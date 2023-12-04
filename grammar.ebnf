@@ -17,16 +17,22 @@ redir =
 	| '>!'
 	| '>>'
 	), value;
-value = arg | string | list | procsub;
+value = arg | string | list | procsub, varref;
 
 procsub = ('`{', '<{' | '>{' | '<>{'), program, '}';
 
 arg = (* One of more non-whitespace and -metachar characters unless backslash
          escaped *);
 
-string = sstring, dstring;
+string = sstring | dstring;
 sstring = (* /('+).+?\g1/ *);
 dstring = (* C-style string allowing escape sequences and variables *);
+
+ident = (* one or more alphanumeric characters, underscores, or prime symbols; a
+           prime can be a unicode single-, double-, triple-, or quadruple-prime.
+         *);
+varref = '$', (ident | '(', ident, ')'), [index];
+index = '[', {value}, ']';
 
 list = '(', {value}, ')';
 
