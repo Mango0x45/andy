@@ -131,6 +131,14 @@ func execCommand(cc astCleanCommand, ctx context) commandResult {
 			case re.kind == redirWrite && name == "_":
 				re.kind = redirClob
 				name = os.DevNull
+			case re.kind == redirWrite:
+				info, err := os.Stat(name)
+				if err != nil {
+					return errInternal{err}
+				}
+				if !info.Mode().IsRegular() {
+					re.kind = redirClob
+				}
 			}
 		}
 
