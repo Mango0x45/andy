@@ -77,5 +77,5 @@ func (_ errInternal) isShellError()    {}
 func (_ errUnsupported) isShellError() {}
 
 func cmdFailed(e commandResult) bool {
-	return e.ExitCode() != 0
+	return e != nil && e.ExitCode() != 0
 }
