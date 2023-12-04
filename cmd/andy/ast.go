@@ -113,6 +113,8 @@ const (
 	redirClob
 	redirRead
 	redirWrite
+	redirSockRead
+	redirSockWrite
 )
 
 func newRedir(k tokenKind) astRedirect {

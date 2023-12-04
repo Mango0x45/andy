@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"net"
 	"os"
 	"os/exec"
 	"slices"
@@ -111,9 +112,9 @@ func execCommand(cc astCleanCommand, ctx context) commandResult {
 	for _, re := range cc.cmd.redirs() {
 		var name string
 
-		ss, err := re.file.toStrings(ctx)
-		if err != nil {
-			return err
+		ss, res := re.file.toStrings(ctx)
+		if res != nil {
+			return res
 		}
 		if len(ss) > 1 {
 			return errExpected{
@@ -131,11 +132,21 @@ func execCommand(cc astCleanCommand, ctx context) commandResult {
 			case re.kind == redirWrite && name == "_":
 				re.kind = redirClob
 				name = os.DevNull
+			case re.kind == redirRead:
+				info, err := os.Stat(name)
+				switch {
+				case err != nil:
+					return errInternal{err}
+				case err == nil && info.Mode()&os.ModeSocket != 0:
+					re.kind = redirSockRead
+				}
 			case re.kind == redirWrite:
 				info, err := os.Stat(name)
 				switch {
 				case err != nil && !errors.Is(err, os.ErrNotExist):
 					return errInternal{err}
+				case err == nil && info.Mode()&os.ModeSocket != 0:
+					re.kind = redirSockWrite
 				case err == nil && !info.Mode().IsRegular():
 					re.kind = redirClob
 				}
@@ -143,48 +154,36 @@ func execCommand(cc astCleanCommand, ctx context) commandResult {
 		}
 
 		var f io.ReadWriteCloser
+		var err error
 		switch re.kind {
 		case redirAppend:
-			fp, err := os.OpenFile(name, appendFlags, 0666)
-			if err != nil {
-				return errInternal{err}
-			}
-			f = fp
+			f, err = os.OpenFile(name, appendFlags, 0666)
 		case redirClob:
-			fp, err := os.Create(name)
-			if err != nil {
-				return errInternal{err}
-			}
-			f = fp
+			f, err = os.Create(name)
 		case redirRead:
-			fp, err := os.Open(name)
-			if err != nil {
-				return errInternal{err}
-			}
-			f = fp
+			f, err = os.Open(name)
 		case redirWrite:
 			_, err := os.Stat(name)
 			switch {
 			case errors.Is(err, os.ErrNotExist):
-				fp, err := os.Create(name)
-				if err != nil {
-					return errInternal{err}
-				}
-				f = fp
+				f, err = os.Create(name)
 			case err != nil:
 				return errFileOp{"stat", name, err}
 			default: // File exists
 				return errClobber{name}
 			}
-		default:
-			panic("unreachable")
+		case redirSockRead, redirSockWrite:
+			f, err = net.Dial("unix", name)
+		}
+		if err != nil {
+			return errInternal{err}
 		}
 
 		cc.add(f)
 		switch re.kind {
-		case redirAppend, redirClob, redirWrite:
+		case redirAppend, redirClob, redirWrite, redirSockWrite:
 			ctx.out = f
-		case redirRead:
+		case redirRead, redirSockRead:
 			ctx.in = f
 		}
 	}
