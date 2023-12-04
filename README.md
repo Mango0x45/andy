@@ -47,6 +47,7 @@ a while.  The currently implemented features are:
 - [X] Raw strings (`r#c…c#`)
 - [X] `exit` builtin function
 - [X] Special read-only variables (`$cdstack`, `$pid`, `$ppid`, `$status`)
+- [X] For-loops with implicit assignment (`for … { echo $_ }`)
 
 ## Example
 

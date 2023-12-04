@@ -86,20 +86,29 @@ type astWhile struct {
 	rs   []astRedirect
 }
 
+type astFor struct {
+	vals []astValue
+	body []astTopLevel
+	rs   []astRedirect
+}
+
 func (_ astSimple) isCommand()   {}
 func (_ astCompound) isCommand() {}
 func (_ astIf) isCommand()       {}
 func (_ astWhile) isCommand()    {}
+func (_ astFor) isCommand()      {}
 
 func (c *astSimple) redirs() []astRedirect   { return c.rs }
 func (c *astCompound) redirs() []astRedirect { return c.rs }
 func (c *astIf) redirs() []astRedirect       { return c.rs }
 func (c *astWhile) redirs() []astRedirect    { return c.rs }
+func (c *astFor) redirs() []astRedirect      { return c.rs }
 
 func (c *astSimple) setRedirs(rs []astRedirect)   { c.rs = rs }
 func (c *astCompound) setRedirs(rs []astRedirect) { c.rs = rs }
 func (c *astIf) setRedirs(rs []astRedirect)       { c.rs = rs }
 func (c *astWhile) setRedirs(rs []astRedirect)    { c.rs = rs }
+func (c *astFor) setRedirs(rs []astRedirect)      { c.rs = rs }
 
 type astRedirect struct {
 	kind redirKind

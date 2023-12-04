@@ -1,7 +1,7 @@
 program = {cmdlist | funcdef};
 cmdlist = pipeline, {lop, pipeline}, end;
 pipeline = cmd, {'|', cmd};
-cmd = (simple | compound | if | while), {redir};
+cmd = (simple | compound | if | while | for), {redir};
 
 funcdef = 'func', value, {value}, '{', program, '}';
 
@@ -10,6 +10,7 @@ compound = '{', program, '}';
 if = 'if', cmdlist, '{', program, '}', [else];
 else = 'else', ('{', program, '}' | if);
 while = 'while', cmdlist, '{', program, '}';
+for = 'for', {value}, '{', program, '}';
 
 redir =
 	( '<'

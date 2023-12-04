@@ -137,6 +137,9 @@ func (p *parser) parseCommand() astCleanCommand {
 	case t.kind == tokArg && t.val == "while":
 		p.next()
 		cmd = p.parseWhile()
+	case t.kind == tokArg && t.val == "for":
+		p.next()
+		cmd = p.parseFor()
 	case t.kind == tokBraceOpen:
 		p.next()
 		cmd = p.parseCompound()
@@ -176,6 +179,18 @@ func (p *parser) parseWhile() *astWhile {
 	}
 	w.body = p.parseBody()
 	return &w
+}
+
+func (p *parser) parseFor() *astFor {
+	var f astFor
+	for isValueTok(p.peek().kind) {
+		f.vals = append(f.vals, p.parseValue())
+	}
+	if t := p.next(); t.kind != tokBraceOpen {
+		die(errExpected{"opening brace", t})
+	}
+	f.body = p.parseBody()
+	return &f
 }
 
 func (p *parser) parseIf() *astIf {

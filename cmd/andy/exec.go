@@ -202,6 +202,8 @@ func execCommand(cc astCleanCommand, ctx context) commandResult {
 		return execIf(cc.cmd.(*astIf), ctx)
 	case *astWhile:
 		return execWhile(cc.cmd.(*astWhile), ctx)
+	case *astFor:
+		return execFor(cc.cmd.(*astFor), ctx)
 	}
 	panic("unreachable")
 }
@@ -220,6 +222,27 @@ func execWhile(cmd *astWhile, ctx context) commandResult {
 			return res
 		}
 	}
+}
+
+func execFor(cmd *astFor, ctx context) commandResult {
+	for _, v := range cmd.vals {
+		ss, res := v.toStrings(ctx)
+		defer v.Close()
+		if cmdFailed(res) {
+			return res
+		}
+
+		for _, s := range ss {
+			ctx := ctx
+			ctx.scope = copyMap(ctx.scope)
+			ctx.scope["_"] = []string{s}
+			if res := execTopLevels(cmd.body, ctx); cmdFailed(res) {
+				return res
+			}
+		}
+	}
+
+	return errExitCode(0)
 }
 
 func execIf(cmd *astIf, ctx context) commandResult {
