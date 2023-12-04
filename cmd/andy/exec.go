@@ -48,6 +48,10 @@ func execFuncDef(fd astFuncDef, ctx context) commandResult {
 		args = append(args, s...)
 	}
 
+	if len(args) == 0 {
+		return errInternal{errors.New("attempted to define function without a name")}
+	}
+
 	f := function{args: args[1:], body: fd.body}
 	globalFuncMap[args[0]] = f
 
