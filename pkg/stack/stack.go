@@ -27,7 +27,6 @@ func (s *Stack[T]) Pop() *T {
 	return &x
 }
 
-func (s *Stack[T]) TopIs(x T) bool {
-	y := s.Peek()
-	return y != nil && x == *y
+func (s Stack[T]) TopIs(x T) bool {
+	return len(s) > 0 && s[len(s)-1] == x
 }
