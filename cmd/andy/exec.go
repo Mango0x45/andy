@@ -132,8 +132,6 @@ func execCommand(cc astCleanCommand, ctx context) commandResult {
 				re.kind = redirClob
 				name = os.DevNull
 			}
-		case *astProcRedir:
-			cc.add(re.file.(*astProcRedir))
 		}
 
 		var f io.ReadWriteCloser
