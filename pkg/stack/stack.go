@@ -20,6 +20,15 @@ func (s *Stack[T]) Pop() *T {
 	return &x
 }
 
-func (s Stack[T]) TopIs(x T) bool {
-	return len(s) > 0 && s[len(s)-1] == x
+func (s Stack[T]) TopIs(x T, xs ...T) bool {
+	xs = append([]T{x}, xs...)
+	if len(s) < len(xs) {
+		return false
+	}
+	for i := range xs {
+		if xs[i] != s[len(s)-i-1] {
+			return false
+		}
+	}
+	return true
 }

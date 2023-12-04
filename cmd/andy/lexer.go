@@ -28,17 +28,19 @@ type nestState int
 
 const (
 	inQuotes nestState = iota
-	inProcBraces
+	inBraces
+	inBraceless
+	inBrackets
+	inParens
 )
 
 type lexer struct {
-	input        string
-	out          chan token
-	pos          int
-	start        int
-	width        int
-	bracketDepth int
-	s            stack.Stack[nestState]
+	input string
+	out   chan token
+	pos   int
+	start int
+	width int
+	s     stack.Stack[nestState]
 }
 
 type lexFn func(*lexer) lexFn
@@ -105,27 +107,38 @@ func lexDefault(l *lexer) lexFn {
 	for {
 		switch r := l.next(); {
 		case isEol(r):
+			if l.s.TopIs(inBraceless) {
+				l.s.Pop()
+				l.emit(tokBraceClose)
+			}
 			l.emit(tokEndStmt)
 		case r == eof:
+			if l.s.TopIs(inBraceless) {
+				l.s.Pop()
+				l.emit(tokBraceClose)
+			}
 			l.emit(tokEof)
 			return nil
 
 		case strings.HasPrefix(l.input[l.pos-l.width:], "`{"):
 			l.pos += 1
-			l.s.Push(inProcBraces)
+			l.s.Push(inBraces)
 			l.emit(tokProcSub)
 		case strings.HasPrefix(l.input[l.pos-l.width:], "<{"):
 			l.pos += 1
-			l.s.Push(inProcBraces)
+			l.s.Push(inBraces)
 			l.emit(tokProcRead)
 		case strings.HasPrefix(l.input[l.pos-l.width:], ">{"):
 			l.pos += 1
-			l.s.Push(inProcBraces)
+			l.s.Push(inBraces)
 			l.emit(tokProcWrite)
 		case strings.HasPrefix(l.input[l.pos-l.width:], "<>{"):
 			l.pos += 2
-			l.s.Push(inProcBraces)
+			l.s.Push(inBraces)
 			l.emit(tokProcRdWr)
+		case r == '`':
+			l.s.Push(inBraceless)
+			l.emit(tokProcSub)
 
 		case strings.HasPrefix(l.input[l.pos-l.width:], "r#"):
 			l.backup()
@@ -147,23 +160,49 @@ func lexDefault(l *lexer) lexFn {
 			return lexWrite
 		case r == '{':
 			l.emit(tokBraceOpen)
+		case r == '(':
+			l.s.Push(inParens)
+			l.emit(tokParenOpen)
 		case r == '}':
 			l.emit(tokBraceClose)
-			if l.s.TopIs(inProcBraces) {
+			if l.s.TopIs(inBraceless) {
+				l.s.Pop()
+				l.emit(tokBraceClose)
+			}
+			if l.s.TopIs(inBraces) {
 				l.s.Pop()
 				if l.s.TopIs(inQuotes) {
 					return lexStringDouble
 				}
 				return lexMaybeConcat
 			}
-		case r == '(':
-			l.emit(tokParenOpen)
 		case r == ')':
-			l.emit(tokParenClose)
+			switch {
+			case l.s.TopIs(inBraceless, inParens):
+				l.s.Pop()
+				l.emit(tokBraceClose)
+				fallthrough
+			case l.s.TopIs(inParens):
+				l.s.Pop()
+				l.emit(tokParenClose)
+			default:
+				l.backup()
+				return lexArg
+			}
 			return lexMaybeConcat
-		case r == ']' && l.bracketDepth > 0:
-			l.emit(tokBracketClose)
-			l.bracketDepth--
+		case r == ']':
+			switch {
+			case l.s.TopIs(inBraceless, inBrackets):
+				l.s.Pop()
+				l.emit(tokBraceClose)
+				fallthrough
+			case l.s.TopIs(inBrackets):
+				l.s.Pop()
+				l.emit(tokBracketClose)
+			default:
+				l.backup()
+				return lexArg
+			}
 			if l.s.TopIs(inQuotes) {
 				return lexStringDouble
 			}
@@ -220,7 +259,9 @@ func lexArg(l *lexer) lexFn {
 				l.errorf("%s", err)
 			}
 			sb.WriteRune(r)
-		case r == ']' && l.bracketDepth > 0:
+		case r == ']' && inState(l.s, inBrackets),
+			r == ')' && inState(l.s, inParens),
+			r == '}' && inState(l.s, inBraces):
 			l.backup()
 			l.out <- token{tokArg, sb.String()}
 			return lexDefault
@@ -279,13 +320,13 @@ func lexVarRef(l *lexer) lexFn {
 	}
 
 	if l.peek() == '[' {
+		l.s.Push(inBrackets)
 		l.emit(tokBracketOpen)
 		l.next()
-		l.bracketDepth++
 		return lexDefault
 	}
 	switch {
-	case l.s.TopIs(inProcBraces):
+	case l.s.TopIs(inBraces):
 		return lexDefault
 	case l.s.TopIs(inQuotes):
 		return lexStringDouble
@@ -382,22 +423,22 @@ func lexMaybeConcat(l *lexer) lexFn {
 	switch r := l.peek(); {
 	case strings.HasPrefix(l.input[l.pos:], "`{"):
 		l.pos += 2
-		l.s.Push(inProcBraces)
+		l.s.Push(inBraces)
 		l.emit(tokProcSub)
 		return lexDefault
 	case strings.HasPrefix(l.input[l.pos:], "<{"):
 		l.pos += 2
-		l.s.Push(inProcBraces)
+		l.s.Push(inBraces)
 		l.emit(tokProcRead)
 		return lexDefault
 	case strings.HasPrefix(l.input[l.pos:], ">{"):
 		l.pos += 2
-		l.s.Push(inProcBraces)
+		l.s.Push(inBraces)
 		l.emit(tokProcWrite)
 		return lexDefault
 	case strings.HasPrefix(l.input[l.pos:], "<>{"):
 		l.pos += 3
-		l.s.Push(inProcBraces)
+		l.s.Push(inBraces)
 		l.emit(tokProcRdWr)
 		return lexDefault
 	case strings.HasPrefix(l.input[l.pos:], "r#"):
@@ -439,4 +480,8 @@ func escapeRune(r rune) (rune, error) {
 		return r, nil
 	}
 	return -1, errors.New(fmt.Sprintf("invalid escape sequence ‘\\%c’", r))
+}
+
+func inState(s stack.Stack[nestState], ns nestState) bool {
+	return s.TopIs(ns) || s.TopIs(inBraceless, ns)
 }

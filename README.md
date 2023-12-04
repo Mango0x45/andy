@@ -48,6 +48,7 @@ a while.  The currently implemented features are:
 - [X] `exit` builtin function
 - [X] Special read-only variables (`$cdstack`, `$pid`, `$ppid`, `$status`)
 - [X] For-loops with implicit assignment (`for … { echo $_ }`)
+- [X] Shorthand process substitution syntax (``​`cmd …``)
 
 ## Example
 
