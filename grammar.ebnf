@@ -20,7 +20,8 @@ redir =
 	), value;
 value = arg | string | list | procsub, varref;
 
-procsub = ('`{', '<{' | '>{' | '<>{'), program, '}';
+procsub = ('`{', '<{' | '>{' | '<>{'), program, '}'
+        | '`', (* non-closing, -eof, or -end tokens *);
 
 arg = (* One of more non-whitespace and -metachar characters unless backslash
          escaped *);
