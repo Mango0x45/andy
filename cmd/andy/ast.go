@@ -23,7 +23,7 @@ type astTopLevel interface {
 }
 
 type astFuncDef struct {
-	args []astValue
+	args astList
 	body []astTopLevel
 }
 
@@ -67,7 +67,7 @@ type astCommand interface {
 }
 
 type astSimple struct {
-	args []astValue
+	args astList
 	rs   []astRedirect
 }
 
@@ -90,7 +90,7 @@ type astWhile struct {
 
 type astFor struct {
 	bind astValue
-	vals []astValue
+	vals astList
 	body []astTopLevel
 	rs   []astRedirect
 }
@@ -203,7 +203,7 @@ const (
 type astVarRef struct {
 	ident   string
 	kind    varRefKind
-	indices []astValue
+	indices astList
 }
 
 func getIndex(s string, n int) (int, commandResult) {
@@ -244,21 +244,19 @@ func (vr astVarRef) toStrings(ctx context) ([]string, commandResult) {
 	}
 
 	if vr.indices != nil {
-		ys := make([]string, 0, len(xs))
-		for _, i := range vr.indices {
-			ss, err := i.toStrings(ctx)
-			defer i.Close()
-			if err != nil {
-				return nil, err
-			}
-			for _, s := range ss {
-				i, err := getIndex(s, len(xs))
-				if err != nil {
-					return nil, errInternal{err}
-				}
+		defer vr.indices.Close()
+		ss, res := vr.indices.toStrings(ctx)
+		if cmdFailed(res) {
+			return nil, res
+		}
 
-				ys = append(ys, xs[i])
+		ys := make([]string, 0, len(xs))
+		for _, s := range ss {
+			i, res := getIndex(s, len(xs))
+			if cmdFailed(res) {
+				return nil, res
 			}
+			ys = append(ys, xs[i])
 		}
 		xs = ys
 	}
@@ -288,13 +286,13 @@ type astConcat struct {
 }
 
 func (c astConcat) toStrings(ctx context) ([]string, commandResult) {
-	xs, err := c.lhs.toStrings(ctx)
-	if err != nil {
-		return []string{}, err
+	xs, res := c.lhs.toStrings(ctx)
+	if cmdFailed(res) {
+		return nil, res
 	}
-	ys, err := c.rhs.toStrings(ctx)
-	if err != nil {
-		return []string{}, err
+	ys, res := c.rhs.toStrings(ctx)
+	if cmdFailed(res) {
+		return nil, res
 	}
 	zs := make([]string, 0, len(xs)*len(ys))
 
@@ -312,9 +310,9 @@ type astList []astValue
 func (l astList) toStrings(ctx context) ([]string, commandResult) {
 	xs := make([]string, 0, len(l))
 	for _, x := range l {
-		ys, err := x.toStrings(ctx)
-		if err != nil {
-			return []string{}, err
+		ys, res := x.toStrings(ctx)
+		if cmdFailed(res) {
+			return nil, res
 		}
 		xs = append(xs, ys...)
 	}
@@ -322,19 +320,15 @@ func (l astList) toStrings(ctx context) ([]string, commandResult) {
 }
 
 type astProcSub struct {
-	seps []astValue
+	seps astList
 	body []astTopLevel
 }
 
 func (ps astProcSub) toStrings(ctx context) ([]string, commandResult) {
-	seps := make([]string, 0, len(ps.seps))
-	for _, sep := range ps.seps {
-		defer sep.Close()
-		ss, res := sep.toStrings(ctx)
-		if cmdFailed(res) {
-			return nil, res
-		}
-		seps = append(seps, ss...)
+	seps, res := ps.seps.toStrings(ctx)
+	defer ps.seps.Close()
+	if cmdFailed(res) {
+		return nil, res
 	}
 
 	var out bytes.Buffer

@@ -39,13 +39,10 @@ func execTopLevel(tl astTopLevel, ctx context) commandResult {
 }
 
 func execFuncDef(fd astFuncDef, ctx context) commandResult {
-	args := make([]string, 0, len(fd.args))
-	for _, a := range fd.args {
-		s, err := a.toStrings(ctx)
-		if err != nil {
-			return err
-		}
-		args = append(args, s...)
+	args, res := fd.args.toStrings(ctx)
+	defer fd.args.Close()
+	if cmdFailed(res) {
+		return res
 	}
 
 	if len(args) == 0 {
@@ -237,20 +234,17 @@ func execFor(cmd *astFor, ctx context) commandResult {
 	}
 	bind := binds[0]
 
-	for _, v := range cmd.vals {
-		ss, res := v.toStrings(ctx)
-		defer v.Close()
-		if cmdFailed(res) {
+	vals, res := cmd.vals.toStrings(ctx)
+	defer cmd.vals.Close()
+	if cmdFailed(res) {
+		return res
+	}
+	for _, v := range vals {
+		ctx := ctx
+		ctx.scope = copyMap(ctx.scope)
+		ctx.scope[bind] = []string{v}
+		if res := execTopLevels(cmd.body, ctx); cmdFailed(res) {
 			return res
-		}
-
-		for _, s := range ss {
-			ctx := ctx
-			ctx.scope = copyMap(ctx.scope)
-			ctx.scope[bind] = []string{s}
-			if res := execTopLevels(cmd.body, ctx); cmdFailed(res) {
-				return res
-			}
 		}
 	}
 
@@ -281,9 +275,10 @@ func execSimple(cmd *astSimple, ctx context) commandResult {
 	extras := []*os.File{}
 
 	for _, v := range cmd.args {
-		ss, err := v.toStrings(ctx)
-		if err != nil {
-			return err
+		ss, res := v.toStrings(ctx)
+		defer v.Close()
+		if cmdFailed(res) {
+			return res
 		}
 		args = append(args, ss...)
 
@@ -299,7 +294,6 @@ func execSimple(cmd *astSimple, ctx context) commandResult {
 				}
 			}
 		}
-		defer v.Close()
 	}
 
 	// You might try to run the empty list
