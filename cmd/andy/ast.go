@@ -9,7 +9,6 @@ import (
 	"os/user"
 	"strconv"
 	"strings"
-	"unicode"
 
 	"git.sr.ht/~mango/andy/pkg/stringsx"
 )
@@ -338,8 +337,7 @@ func (ps astProcSub) toStrings(ctx context) ([]string, commandResult) {
 		return nil, res
 	}
 
-	s := strings.TrimRightFunc(out.String(), unicode.IsSpace)
-	return stringsx.SplitMulti(s, seps), nil
+	return stringsx.SplitMulti(out.String(), seps), nil
 }
 
 type astProcRedir struct {
