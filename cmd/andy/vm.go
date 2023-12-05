@@ -38,16 +38,18 @@ func init() {
 
 func (vm *vm) run(prog astProgram) {
 	for _, tl := range prog {
-		ret := execTopLevel(tl, context{
+		res := execTopLevel(tl, context{
 			os.Stdin,
 			os.Stdout,
 			os.Stderr,
 			nil,
 		})
-		code := int(ret.ExitCode())
+		code := int(res.ExitCode())
 		globalVariableMap["status"] = []string{strconv.Itoa(code)}
-		if _, ok := ret.(shellError); ok {
-			warn(ret)
+		if cmdFailed(res) {
+			if _, ok := res.(errExitCode); !ok {
+				warn(res)
+			}
 			if !vm.interactive {
 				os.Exit(1)
 			}
