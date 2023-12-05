@@ -12,16 +12,11 @@ else = 'else', ('{', program, '}' | if);
 while = 'while', cmdlist, '{', program, '}';
 for = 'for', [ident, 'in'], {value}, '{', program, '}';
 
-redir =
-	( '<'
-	| '>'
-	| '>!'
-	| '>>'
-	), value;
+redir = ( '<' | '>' | '>!' | '>>'), value;
 value = arg | string | list | procsub, varref;
 
-procsub = ('`{', '<{' | '>{' | '<>{'), program, '}'
-        | '`', (* non-closing, -eof, or -end tokens *);
+procsub = (('`', [list], '{') | '<{' | '>{' | '<>{'), program, '}'
+        | '`', [list], (* non-closing, -eof, or -end tokens *);
 
 arg = (* One of more non-whitespace and -metachar characters unless backslash
          escaped *);
