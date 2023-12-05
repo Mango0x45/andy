@@ -12,8 +12,9 @@ func SplitMulti(s string, seps []string) []string {
 				continue
 			}
 			out = append(out, s[i:j])
-			j += len(sep)
-			i = j
+			j += len(sep) - 1
+			i = j + 1
+			break
 		}
 	}
 	if i < len(s) {
