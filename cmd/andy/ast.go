@@ -323,7 +323,7 @@ func (l astList) toStrings(ctx context) ([]string, commandResult) {
 
 type astProcSub struct {
 	seps []astValue
-	body   []astTopLevel
+	body []astTopLevel
 }
 
 func (ps astProcSub) toStrings(ctx context) ([]string, commandResult) {
