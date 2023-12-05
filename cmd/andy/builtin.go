@@ -71,7 +71,7 @@ func cmdDot(cmd *exec.Cmd, _ context) uint8 {
 func cmdCall(cmd *exec.Cmd, ctx context) uint8 {
 	var bflag, cflag bool
 	usage := func() uint8 {
-		fmt.Fprintln(cmd.Stderr, "Usage: call [-bc] command [args ...]")
+		fmt.Fprintln(cmd.Stderr, "Usage: call [-bc] command [argument ...]")
 		return 1
 	}
 
@@ -188,7 +188,7 @@ func cmdEcho(cmd *exec.Cmd, _ context) uint8 {
 
 func cmdExec(cmd *exec.Cmd, _ context) uint8 {
 	if len(cmd.Args) < 2 {
-		fmt.Fprintln(cmd.Stderr, "Usage: exec program [arguments ...]")
+		fmt.Fprintln(cmd.Stderr, "Usage: exec command [argument ...]")
 		return 1
 	}
 	argv0, err := exec.LookPath(cmd.Args[1])
