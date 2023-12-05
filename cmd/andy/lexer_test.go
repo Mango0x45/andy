@@ -143,3 +143,30 @@ func TestLexProcSub(t *testing.T) {
 
 	assertTokens(t, xs, getTokens(s))
 }
+
+func TestLexList(t *testing.T) {
+	xs := []tokenKind{
+		tokEndStmt, tokParenOpen, tokEndStmt, tokArg, tokEndStmt,
+		tokArg, tokEndStmt, tokParenClose, tokEndStmt, tokEof,
+	}
+	s := `
+	(
+		echo
+		foo
+	)
+	`
+
+	assertTokens(t, xs, getTokens(s))
+
+	xs = []tokenKind{
+		tokEndStmt, tokParenOpen, tokEndStmt, tokArg, tokEndStmt,
+		tokArg, tokParenClose, tokEndStmt, tokEof,
+	}
+	s = `
+	(
+		echo
+		foo)
+	`
+
+	assertTokens(t, xs, getTokens(s))
+}

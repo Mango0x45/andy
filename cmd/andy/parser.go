@@ -359,7 +359,8 @@ func (p *parser) parseList() astList {
 			p.next()
 		case !isValueTok(t.kind):
 			die(errExpected{"value", t})
+		default:
+			xs = append(xs, p.parseValue())
 		}
-		xs = append(xs, p.parseValue())
 	}
 }
