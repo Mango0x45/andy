@@ -129,16 +129,16 @@ func TestSkipComment(t *testing.T) {
 func TestLexProcSub(t *testing.T) {
 	xs := []tokenKind{
 		tokEndStmt, tokArg, tokProcSub, tokArg, tokArg, tokBraceClose,
-		tokEndStmt, tokArg, tokProcSub, tokBracketOpen, tokArg, tokArg,
-		tokArg, tokBracketClose, tokArg, tokArg, tokBraceClose,
-		tokEndStmt, tokArg, tokProcSub, tokBracketOpen, tokArg, tokArg,
-		tokArg, tokBracketClose, tokArg, tokArg, tokBraceClose,
-		tokEndStmt, tokEof,
+		tokEndStmt, tokArg, tokProcSub, tokParenOpen, tokArg, tokArg,
+		tokArg, tokParenClose, tokArg, tokArg, tokBraceClose,
+		tokEndStmt, tokArg, tokVarRef, tokBracketOpen, tokProcSub,
+		tokParenOpen, tokArg, tokArg, tokArg, tokParenClose, tokArg,
+		tokArg, tokBraceClose, tokBracketClose, tokEndStmt, tokEof,
 	}
 	s := `
 	echo ` + "`" + `{echo foo}
-	echo ` + "`" + `[a b c]{echo foo}
-	echo ` + "`" + `[a b c]echo foo
+	echo ` + "`" + `(a b c){echo foo}
+	echo $xs[` + "`" + `(a b c)echo foo]
 	`
 
 	assertTokens(t, xs, getTokens(s))

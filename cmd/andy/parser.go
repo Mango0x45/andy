@@ -317,8 +317,9 @@ func (p *parser) parseValue() astValue {
 		}
 	case tokProcSub:
 		var seps []astValue
-		if p.peek().kind == tokBracketOpen {
-			seps = p.parseIndices()
+		if p.peek().kind == tokParenOpen {
+			p.next()
+			seps = p.parseList()
 		}
 		v = astProcSub{seps: seps, body: p.parseBody()}
 	default:

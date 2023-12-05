@@ -186,6 +186,16 @@ func lexDefault(l *lexer) lexFn {
 				l.backup()
 				return lexArg
 			}
+			if l.s.TopIs(afterBacktick) {
+				l.s.Pop()
+				if l.peek() != '{' {
+					l.s.Push(inBraceless)
+				} else {
+					l.next()
+					l.s.Push(inBraces)
+				}
+				return lexDefault
+			}
 			return lexMaybeConcat
 		case r == ']':
 			switch {
@@ -200,17 +210,8 @@ func lexDefault(l *lexer) lexFn {
 				l.backup()
 				return lexArg
 			}
-			switch {
-			case l.s.TopIs(inQuotes):
-				return lexStringDouble
-			case l.s.TopIs(afterBacktick):
-				if l.peek() != '{' {
-					l.s.Push(inBraceless)
-				} else {
-					l.next()
-					l.s.Push(inBraces)
-				}
-				return lexDefault
+			if l.s.TopIs(inQuotes) {
+				return lexStringSingle
 			}
 			return lexMaybeConcat
 		case r == '#':
@@ -426,12 +427,12 @@ func lexBacktick(l *lexer) lexFn {
 		l.next()
 		l.s.Push(inBraces)
 		l.emit(tokProcSub)
-	case r == '[':
+	case r == '(':
 		l.next()
 		l.s.Push(afterBacktick)
-		l.s.Push(inBrackets)
+		l.s.Push(inParens)
 		l.emit(tokProcSub)
-		l.emit(tokBracketOpen)
+		l.emit(tokParenOpen)
 	case unicode.IsSpace(r):
 		l.out <- token{tokArg, "`"}
 	default:
@@ -504,5 +505,7 @@ func escapeRune(r rune) (rune, error) {
 }
 
 func inState(s stack.Stack[nestState], ns nestState) bool {
-	return s.TopIs(ns) || s.TopIs(inBraceless, ns)
+	return s.TopIs(ns) ||
+		s.TopIs(inBraceless, ns) ||
+		s.TopIs(afterBacktick, ns)
 }
