@@ -47,8 +47,10 @@ func cmdDot(cmd *exec.Cmd, _ context) uint8 {
 		cmd.Args = append(cmd.Args, "-")
 	}
 	for _, f := range cmd.Args[1:] {
-		var buf []byte
-		var err error
+		var (
+			buf []byte
+			err error
+		)
 
 		if f == "-" {
 			buf, err = io.ReadAll(cmd.Stdin)
@@ -187,8 +189,10 @@ func cmdEcho(cmd *exec.Cmd, _ context) uint8 {
 }
 
 func cmdExec(cmd *exec.Cmd, _ context) uint8 {
-	var zflag bool
-	var zeroth string
+	var (
+		zflag  bool
+		zeroth string
+	)
 
 	usage := func() uint8 {
 		fmt.Fprintln(cmd.Stderr, "Usage: exec [-z argument] command [argument ...]")
