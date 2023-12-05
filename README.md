@@ -51,6 +51,7 @@ a while.  The currently implemented features are:
 - [X] For-loops with implicit assignment (`for … { echo $_ }`)
 - [X] For-in-loops (`for x in … { echo $x }`)
 - [X] Shorthand process substitution syntax (``​`cmd …``)
+- [X] Split process substitutions on delimiters (``​`(seps){cmd …}``)
 
 ## Example
 

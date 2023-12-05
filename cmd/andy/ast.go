@@ -10,6 +10,8 @@ import (
 	"strconv"
 	"strings"
 	"unicode"
+
+	"git.sr.ht/~mango/andy/pkg/stringsx"
 )
 
 // See grammar.ebnf in the project root for details
@@ -320,10 +322,21 @@ func (l astList) toStrings(ctx context) ([]string, commandResult) {
 }
 
 type astProcSub struct {
-	body []astTopLevel
+	seps []astValue
+	body   []astTopLevel
 }
 
 func (ps astProcSub) toStrings(ctx context) ([]string, commandResult) {
+	seps := make([]string, 0, len(ps.seps))
+	for _, sep := range ps.seps {
+		defer sep.Close()
+		ss, res := sep.toStrings(ctx)
+		if cmdFailed(res) {
+			return nil, res
+		}
+		seps = append(seps, ss...)
+	}
+
 	var out bytes.Buffer
 	ctx.out = &out
 
@@ -332,7 +345,7 @@ func (ps astProcSub) toStrings(ctx context) ([]string, commandResult) {
 	}
 
 	s := strings.TrimRightFunc(out.String(), unicode.IsSpace)
-	return []string{s}, nil
+	return stringsx.SplitMulti(s, seps), nil
 }
 
 type astProcRedir struct {

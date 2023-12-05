@@ -32,6 +32,7 @@ const (
 	inBraceless
 	inBrackets
 	inParens
+	afterBacktick
 )
 
 type lexer struct {
@@ -120,10 +121,6 @@ func lexDefault(l *lexer) lexFn {
 			l.emit(tokEof)
 			return nil
 
-		case strings.HasPrefix(l.input[l.pos-l.width:], "`{"):
-			l.pos += 1
-			l.s.Push(inBraces)
-			l.emit(tokProcSub)
 		case strings.HasPrefix(l.input[l.pos-l.width:], "<{"):
 			l.pos += 1
 			l.s.Push(inBraces)
@@ -137,8 +134,8 @@ func lexDefault(l *lexer) lexFn {
 			l.s.Push(inBraces)
 			l.emit(tokProcRdWr)
 		case r == '`':
-			l.s.Push(inBraceless)
-			l.emit(tokProcSub)
+			l.backup()
+			return lexBacktick
 
 		case strings.HasPrefix(l.input[l.pos-l.width:], "r#"):
 			l.backup()
@@ -203,8 +200,17 @@ func lexDefault(l *lexer) lexFn {
 				l.backup()
 				return lexArg
 			}
-			if l.s.TopIs(inQuotes) {
+			switch {
+			case l.s.TopIs(inQuotes):
 				return lexStringDouble
+			case l.s.TopIs(afterBacktick):
+				if l.peek() != '{' {
+					l.s.Push(inBraceless)
+				} else {
+					l.next()
+					l.s.Push(inBraces)
+				}
+				return lexDefault
 			}
 			return lexMaybeConcat
 		case r == '#':
@@ -413,6 +419,28 @@ func lexStringDouble(l *lexer) lexFn {
 	}
 }
 
+func lexBacktick(l *lexer) lexFn {
+	l.next() // Consume backtick
+	switch r := l.peek(); {
+	case r == '{':
+		l.next()
+		l.s.Push(inBraces)
+		l.emit(tokProcSub)
+	case r == '[':
+		l.next()
+		l.s.Push(afterBacktick)
+		l.s.Push(inBrackets)
+		l.emit(tokProcSub)
+		l.emit(tokBracketOpen)
+	case unicode.IsSpace(r):
+		l.out <- token{tokArg, "`"}
+	default:
+		l.s.Push(inBraceless)
+		l.emit(tokProcSub)
+	}
+	return lexDefault
+}
+
 func lexMaybeConcat(l *lexer) lexFn {
 	r := l.peek()
 	if unicode.IsSpace(r) || isEol(r) || isClosing(r) || r == eof {
@@ -421,11 +449,8 @@ func lexMaybeConcat(l *lexer) lexFn {
 
 	l.emit(tokConcat)
 	switch r := l.peek(); {
-	case strings.HasPrefix(l.input[l.pos:], "`{"):
-		l.pos += 2
-		l.s.Push(inBraces)
-		l.emit(tokProcSub)
-		return lexDefault
+	case r == '`':
+		return lexBacktick
 	case strings.HasPrefix(l.input[l.pos:], "<{"):
 		l.pos += 2
 		l.s.Push(inBraces)
@@ -451,10 +476,6 @@ func lexMaybeConcat(l *lexer) lexFn {
 		return lexDefault
 	case r == '$':
 		return lexVarRef
-	case r == '`':
-		l.out <- token{tokString, "`"}
-		l.next()
-		return lexMaybeConcat
 	}
 	return lexDefault
 }

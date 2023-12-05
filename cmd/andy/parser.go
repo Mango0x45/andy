@@ -316,7 +316,11 @@ func (p *parser) parseValue() astValue {
 			body: p.parseBody(),
 		}
 	case tokProcSub:
-		v = astProcSub{body: p.parseBody()}
+		var seps []astValue
+		if p.peek().kind == tokBracketOpen {
+			seps = p.parseIndices()
+		}
+		v = astProcSub{seps: seps, body: p.parseBody()}
 	default:
 		die(errExpected{"value", t})
 	}
