@@ -187,16 +187,44 @@ func cmdEcho(cmd *exec.Cmd, _ context) uint8 {
 }
 
 func cmdExec(cmd *exec.Cmd, _ context) uint8 {
-	if len(cmd.Args) < 2 {
-		fmt.Fprintln(cmd.Stderr, "Usage: exec command [argument ...]")
+	var zflag bool
+	var zeroth string
+
+	usage := func() uint8 {
+		fmt.Fprintln(cmd.Stderr, "Usage: exec [-z argument] command [argument ...]")
 		return 1
 	}
-	argv0, err := exec.LookPath(cmd.Args[1])
-	if err != nil && !errors.Is(err, exec.ErrDot) {
-		return cmdErrorf(cmd, "unable to find ‘%s’ in $PATH", cmd.Args[1])
+
+	flags, optind, err := opts.GetLong(cmd.Args, []opts.LongOpt{
+		{Short: 'z', Long: "zero", Arg: opts.Required},
+	})
+	if err != nil {
+		cmdErrorf(cmd, "%s", err)
+		return usage()
 	}
-	err = syscall.Exec(argv0, cmd.Args[1:], cmd.Environ())
-	return cmdErrorf(cmd, "failed to exec ‘%s’: %s", cmd.Args[1], err)
+
+	for _, f := range flags {
+		switch f.Key {
+		case 'z':
+			zflag = true
+			zeroth = f.Value
+		}
+	}
+
+	rest := cmd.Args[optind:]
+	if len(rest) == 0 {
+		return usage()
+	}
+
+	argv0, err := exec.LookPath(rest[0])
+	if err != nil && !errors.Is(err, exec.ErrDot) {
+		return cmdErrorf(cmd, "unable to find ‘%s’ in $PATH", rest[0])
+	}
+	if zflag {
+		rest[0] = zeroth
+	}
+	err = syscall.Exec(argv0, rest, cmd.Environ())
+	return cmdErrorf(cmd, "failed to exec ‘%s’: %s", argv0, err)
 }
 
 func cmdExit(cmd *exec.Cmd, _ context) uint8 {
