@@ -53,6 +53,7 @@ a while.  The currently implemented features are:
 - [X] Shorthand process substitution syntax (``​`cmd …``)
 - [X] Split process substitutions on delimiters (``​`(seps){cmd …}``)
 - [X] `umask` builtin function
+- [X] `type` builtin function
 
 ## Example
 

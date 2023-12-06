@@ -39,6 +39,7 @@ func init() {
 		"read":  cmdRead,
 		"set":   cmdSet,
 		"true":  cmdTrue,
+		"type":  cmdType,
 		"umask": cmdUmask,
 	}
 }
@@ -432,6 +433,28 @@ func cmdSet(cmd *exec.Cmd, ctx context) uint8 {
 }
 
 func cmdTrue(_ *exec.Cmd, _ context) uint8 {
+	return 0
+}
+
+func cmdType(cmd *exec.Cmd, _ context) uint8 {
+	cmd.Args = shiftDashDash(cmd.Args)
+	if len(cmd.Args) < 2 {
+		fmt.Fprintln(cmd.Stderr, "Usage: type identifier ...")
+		return 1
+	}
+
+	for _, a := range cmd.Args[1:] {
+		if _, ok := globalFuncMap[a]; ok {
+			fmt.Fprintln(cmd.Stdout, "function")
+		} else if _, ok := builtins[a]; ok {
+			fmt.Fprintln(cmd.Stdout, "builtin")
+		} else if _, err := exec.LookPath(a); err == nil || errors.Is(err, exec.ErrDot) {
+			fmt.Fprintln(cmd.Stdout, "executable")
+		} else {
+			fmt.Fprintln(cmd.Stdout, "unknown")
+		}
+	}
+
 	return 0
 }
 
