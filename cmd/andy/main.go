@@ -49,7 +49,10 @@ func runRepl() {
 
 func runFile(f string) {
 	bytes, err := os.ReadFile(f)
-	if err != nil {
+	switch {
+	case errors.Is(err, os.ErrNotExist):
+		return
+	case err != nil:
 		die(err)
 	}
 
