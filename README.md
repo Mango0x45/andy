@@ -55,6 +55,7 @@ a while.  The currently implemented features are:
 - [X] `umask` builtin function
 - [X] `type` builtin function
 - [X] CLI arguments via `$args`
+- [X] Default variable expansion value (`$(foo:bar)`)
 
 ## Example
 

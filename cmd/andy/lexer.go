@@ -306,26 +306,41 @@ func lexVarRef(l *lexer) lexFn {
 	}
 
 	// Optional surrounding parens
-	parens := false
+	var (
+		parens bool
+		colon  bool
+	)
 	if l.peek() == '(' {
 		parens = true
 		l.next()
 	}
-	l.start = l.pos
 
+	l.start = l.pos
 	l.pos += strings.IndexFunc(l.input[l.pos:], func(r rune) bool {
+		if parens && !colon && r == ':' {
+			colon = true
+		}
 		return !isRefRune(r)
 	})
 	if l.pos < l.start {
 		l.pos = len(l.input)
 	}
-
-	if parens && l.peek() != ')' {
-		return l.errorf("unterminated variable ‘$(%s’",
-			l.input[l.start:l.pos])
-	}
 	l.emit(kind)
+
+	if colon {
+		l.start = l.pos + 1
+		l.pos += strings.IndexByte(l.input[l.pos:], ')')
+		if l.pos < l.start {
+			l.pos = len(l.input)
+		}
+		l.emit(tokColon)
+	}
+
 	if parens {
+		if l.peek() != ')' {
+			return l.errorf("unterminated variable ‘$(%s’",
+				l.input[l.start:l.pos])
+		}
 		l.next() // Consume closing brace
 	}
 

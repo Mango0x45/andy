@@ -300,6 +300,9 @@ func (p *parser) parseValue() astValue {
 		v = astString(t.val)
 	case tokVarRef, tokVarFlat, tokVarLen:
 		vr := newVarRef(t)
+		if p.peek().kind == tokColon {
+			vr.repl = astArgument(p.next().val)
+		}
 		if p.peek().kind == tokBracketOpen {
 			vr.indices = p.parseIndices()
 		}

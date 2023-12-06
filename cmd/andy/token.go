@@ -11,11 +11,12 @@ const (
 	tokEof
 
 	tokArg
+	tokColon
 	tokConcat
+	tokString
 	tokVarFlat
 	tokVarLen
 	tokVarRef
-	tokString
 
 	tokAppend
 	tokClobber
@@ -62,6 +63,8 @@ func (t token) String() string {
 			return fmt.Sprintf("‘%.*s…’", maxStrLen, t.val)
 		}
 		return "‘" + t.val + "’"
+	case tokColon:
+		return ":"
 	case tokConcat:
 		return "value concatination"
 	case tokVarFlat:

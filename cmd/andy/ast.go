@@ -201,6 +201,7 @@ const (
 
 type astVarRef struct {
 	ident   string
+	repl    astValue
 	kind    varRefKind
 	indices astList
 }
@@ -239,6 +240,14 @@ func (vr astVarRef) toStrings(ctx context) ([]string, commandResult) {
 	if !ok {
 		if x, ok := os.LookupEnv(vr.ident); ok {
 			xs = []string{x}
+		}
+	}
+
+	if vr.repl != nil && (len(xs) == 0 || xs[0] == "") {
+		var res commandResult
+		xs, res = vr.repl.toStrings(ctx)
+		if cmdFailed(res) {
+			return nil, res
 		}
 	}
 
