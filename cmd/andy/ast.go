@@ -200,7 +200,7 @@ const (
 )
 
 type astVarRef struct {
-	ident   string
+	ident   astValue
 	repl    astValue
 	kind    varRefKind
 	indices astList
@@ -233,12 +233,24 @@ func getIndex(s string, n int) (int, commandResult) {
 }
 
 func (vr astVarRef) toStrings(ctx context) ([]string, commandResult) {
-	xs, ok := ctx.scope[vr.ident]
+	ss, res := vr.ident.toStrings(ctx)
+	defer vr.ident.Close()
+	if cmdFailed(res) {
+		return nil, res
+	}
+	if len(ss) > 2 {
+		return nil, errInternal{errors.New("not implemented")}
+	} else if len(ss) == 0 {
+		return []string{}, nil
+	}
+
+	ident := ss[0]
+	xs, ok := ctx.scope[ident]
 	if !ok {
-		xs, ok = globalVariableMap[vr.ident]
+		xs, ok = globalVariableMap[ident]
 	}
 	if !ok {
-		if x, ok := os.LookupEnv(vr.ident); ok {
+		if x, ok := os.LookupEnv(ident); ok {
 			xs = []string{x}
 		}
 	}
@@ -246,6 +258,7 @@ func (vr astVarRef) toStrings(ctx context) ([]string, commandResult) {
 	if vr.repl != nil && (len(xs) == 0 || xs[0] == "") {
 		var res commandResult
 		xs, res = vr.repl.toStrings(ctx)
+		defer vr.repl.Close()
 		if cmdFailed(res) {
 			return nil, res
 		}
@@ -279,7 +292,12 @@ func (vr astVarRef) toStrings(ctx context) ([]string, commandResult) {
 }
 
 func newVarRef(t token) astVarRef {
-	vr := astVarRef{ident: t.val}
+	var vr astVarRef
+	if t.val == "" {
+		vr.ident = nil
+	} else {
+		vr.ident = astArgument(t.val)
+	}
 	switch t.kind {
 	case tokVarFlat:
 		vr.kind = vrFlatten

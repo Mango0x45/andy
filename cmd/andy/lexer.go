@@ -33,6 +33,7 @@ const (
 	inBrackets
 	inParens
 	afterBacktick
+	afterDollar
 )
 
 type lexer struct {
@@ -188,13 +189,24 @@ func lexDefault(l *lexer) lexFn {
 			}
 			if l.s.TopIs(afterBacktick) {
 				l.s.Pop()
-				if l.peek() != '{' {
-					l.s.Push(inBraceless)
-				} else {
+				if l.peek() == '{' {
 					l.next()
 					l.s.Push(inBraces)
+				} else {
+					l.s.Push(inBraceless)
 				}
 				return lexDefault
+			} else if l.s.TopIs(afterDollar) {
+				l.s.Pop()
+				if l.peek() == '[' {
+					l.next()
+					l.s.Push(inBrackets)
+					l.emit(tokBracketOpen)
+					return lexDefault
+				}
+			}
+			if l.s.TopIs(inQuotes) {
+				return lexStringDouble
 			}
 			return lexMaybeConcat
 		case r == ']':
@@ -279,6 +291,10 @@ func lexArg(l *lexer) lexFn {
 			l.backup()
 			l.out <- token{tokArg, sb.String()}
 			return lexMaybeConcat
+		case r == ':' && l.s.TopIs(inParens, afterDollar):
+			l.out <- token{tokArg, sb.String()}
+			l.emit(tokColon)
+			return lexDefault
 		default:
 			sb.WriteRune(r)
 		}
@@ -293,56 +309,38 @@ func lexVarRef(l *lexer) lexFn {
 	if l.s.TopIs(inQuotes) {
 		kind = tokVarFlat
 	}
-	switch l.peek() {
-	case '^':
+	switch r := l.peek(); {
+	case r == '^':
 		if l.s.TopIs(inQuotes) {
 			return l.errorf("The ‘^’ variable prefix is redundant in double-quoted strings")
 		}
 		kind = tokVarFlat
 		l.next()
-	case '#':
+	case r == '#':
 		kind = tokVarLen
 		l.next()
+	case r != '(' && !isRefRune(r):
+		l.out <- token{tokArg, "$"}
+		return lexMaybeConcat
 	}
 
-	// Optional surrounding parens
-	var (
-		parens bool
-		colon  bool
-	)
 	if l.peek() == '(' {
-		parens = true
 		l.next()
+		l.out <- token{kind, ""}
+		l.emit(tokParenOpen)
+		l.s.Push(afterDollar)
+		l.s.Push(inParens)
+		return lexDefault
 	}
 
 	l.start = l.pos
 	l.pos += strings.IndexFunc(l.input[l.pos:], func(r rune) bool {
-		if parens && !colon && r == ':' {
-			colon = true
-		}
 		return !isRefRune(r)
 	})
 	if l.pos < l.start {
 		l.pos = len(l.input)
 	}
 	l.emit(kind)
-
-	if colon {
-		l.start = l.pos + 1
-		l.pos += strings.IndexByte(l.input[l.pos:], ')')
-		if l.pos < l.start {
-			l.pos = len(l.input)
-		}
-		l.emit(tokColon)
-	}
-
-	if parens {
-		if l.peek() != ')' {
-			return l.errorf("unterminated variable ‘$(%s’",
-				l.input[l.start:l.pos])
-		}
-		l.next() // Consume closing brace
-	}
 
 	if l.peek() == '[' {
 		l.s.Push(inBrackets)

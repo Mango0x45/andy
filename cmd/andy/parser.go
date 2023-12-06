@@ -300,8 +300,17 @@ func (p *parser) parseValue() astValue {
 		v = astString(t.val)
 	case tokVarRef, tokVarFlat, tokVarLen:
 		vr := newVarRef(t)
-		if p.peek().kind == tokColon {
-			vr.repl = astArgument(p.next().val)
+		if vr.ident == nil && p.peek().kind == tokParenOpen {
+			p.next()
+			vr.ident = p.parseValue()
+			if p.peek().kind == tokColon {
+				p.next()
+				vr.repl = p.parseValue()
+			}
+			if p.peek().kind != tokParenClose {
+				die(errExpected{"closing parenthesis", t})
+			}
+			p.next()
 		}
 		if p.peek().kind == tokBracketOpen {
 			vr.indices = p.parseIndices()
