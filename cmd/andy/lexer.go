@@ -272,7 +272,10 @@ func lexArg(l *lexer) lexFn {
 			l.backup()
 			l.out <- token{tokArg, sb.String()}
 			return lexDefault
-		case unicode.IsSpace(r) || isMetachar(r) || isEol(r) || r == eof:
+		case r == eof,
+			unicode.IsSpace(r),
+			isEol(r),
+			isMetachar(r) && r != '{':
 			l.backup()
 			l.out <- token{tokArg, sb.String()}
 			return lexMaybeConcat
