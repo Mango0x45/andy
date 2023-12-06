@@ -103,6 +103,7 @@ func cmdCall(cmd *exec.Cmd, ctx context) uint8 {
 }
 
 func cmdCd(cmd *exec.Cmd, _ context) uint8 {
+	cmd.Args = shiftDashDash(cmd.Args)
 	defer func() {
 		globalVariableMap["cdstack"] = dirStack
 	}()
@@ -162,6 +163,7 @@ func cmdEcho(cmd *exec.Cmd, _ context) uint8 {
 }
 
 func cmdEval(cmd *exec.Cmd, _ context) uint8 {
+	cmd.Args = shiftDashDash(cmd.Args)
 	if len(cmd.Args) == 1 {
 		cmd.Args = append(cmd.Args, "-")
 	}
@@ -233,6 +235,7 @@ func cmdExec(cmd *exec.Cmd, _ context) uint8 {
 }
 
 func cmdExit(cmd *exec.Cmd, _ context) uint8 {
+	cmd.Args = shiftDashDash(cmd.Args)
 	lo, hi := 0, math.MaxUint8
 
 	var n int
@@ -257,6 +260,7 @@ func cmdFalse(_ *exec.Cmd, _ context) uint8 {
 }
 
 func cmdQuote(cmd *exec.Cmd, _ context) uint8 {
+	cmd.Args = shiftDashDash(cmd.Args)
 	for _, arg := range cmd.Args[1:] {
 		s := "'#"
 		for strings.Contains(arg, s) {
