@@ -41,7 +41,7 @@ a while.  The currently implemented features are:
 - [X] Index into variables (`$var[1 1 -2 5]`)
 - [X] Process substitution (``​`{…}``, `<{…}`, `>{…}`, `<>{…}`)
 - [X] Read stdin into array (`cmd | read var`)
-- [X] Source scripts (`. file…`)
+- [X] Source scripts (`eval file…`)
 - [X] Define functions with named arguments (`func f arg1 … {…}`)
 - [X] Function-local- and global variables (`set -g …; read -g …`)
 - [X] Quote arguments using Andy quoting rules (`quote …`)

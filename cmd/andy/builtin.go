@@ -28,10 +28,10 @@ var (
 
 func init() {
 	builtins = map[string]builtin{
-		".":     cmdDot,
 		"call":  cmdCall,
 		"cd":    cmdCd,
 		"echo":  cmdEcho,
+		"eval":  cmdEval,
 		"exec":  cmdExec,
 		"exit":  cmdExit,
 		"false": cmdFalse,
@@ -40,34 +40,6 @@ func init() {
 		"set":   cmdSet,
 		"true":  cmdTrue,
 	}
-}
-
-func cmdDot(cmd *exec.Cmd, _ context) uint8 {
-	if len(cmd.Args) == 1 {
-		cmd.Args = append(cmd.Args, "-")
-	}
-	for _, f := range cmd.Args[1:] {
-		var (
-			buf []byte
-			err error
-		)
-
-		if f == "-" {
-			buf, err = io.ReadAll(cmd.Stdin)
-		} else {
-			buf, err = os.ReadFile(f)
-		}
-
-		if err != nil {
-			return cmdErrorf(cmd, "%s", err)
-		}
-
-		l := newLexer(string(buf))
-		p := newParser(l.out)
-		go l.run()
-		globalVm.run(p.run())
-	}
-	return 0
 }
 
 func cmdCall(cmd *exec.Cmd, ctx context) uint8 {
@@ -185,6 +157,34 @@ func cmdEcho(cmd *exec.Cmd, _ context) uint8 {
 	}
 
 	fmt.Fprintln(cmd.Stdout, args...)
+	return 0
+}
+
+func cmdEval(cmd *exec.Cmd, _ context) uint8 {
+	if len(cmd.Args) == 1 {
+		cmd.Args = append(cmd.Args, "-")
+	}
+	for _, f := range cmd.Args[1:] {
+		var (
+			buf []byte
+			err error
+		)
+
+		if f == "-" {
+			buf, err = io.ReadAll(cmd.Stdin)
+		} else {
+			buf, err = os.ReadFile(f)
+		}
+
+		if err != nil {
+			return cmdErrorf(cmd, "%s", err)
+		}
+
+		l := newLexer(string(buf))
+		p := newParser(l.out)
+		go l.run()
+		globalVm.run(p.run())
+	}
 	return 0
 }
 
