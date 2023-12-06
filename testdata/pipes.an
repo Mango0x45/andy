@@ -13,4 +13,4 @@ wonderful world"
 | cut -d " " -f2
 
 # No-op
-echo foo >_ | grep bar
+echo foo >_ | grep bar || true
