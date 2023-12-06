@@ -11,14 +11,11 @@ import (
 var globalVm vm
 
 func main() {
-	switch len(os.Args) {
-	case 1:
+	if len(os.Args) == 1 {
 		runRepl()
-	case 2:
+	} else {
+		globalVm.file = true
 		runFile(os.Args[1])
-	default:
-		fmt.Fprintln(os.Stderr, "Usage: andy [file]")
-		os.Exit(1)
 	}
 }
 

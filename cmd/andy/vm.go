@@ -13,6 +13,7 @@ type context struct {
 }
 
 type vm struct {
+	file        bool
 	interactive bool
 }
 
@@ -28,15 +29,18 @@ var (
 
 func init() {
 	globalFuncMap = make(map[string]function, 64)
-	globalVariableMap = make(map[string][]string, 64)
-
-	globalVariableMap["_"] = []string{} // Other shells export this
-	globalVariableMap["status"] = []string{"0"}
-	globalVariableMap["pid"] = []string{strconv.Itoa(os.Getpid())}
-	globalVariableMap["ppid"] = []string{strconv.Itoa(os.Getppid())}
+	globalVariableMap = map[string][]string{
+		"_":      {}, // Other shells export this
+		"pid":    {strconv.Itoa(os.Getpid())},
+		"ppid":   {strconv.Itoa(os.Getppid())},
+		"status": {"0"},
+	}
 }
 
 func (vm *vm) run(prog astProgram) {
+	if vm.file {
+		globalVariableMap["args"] = os.Args[1:]
+	}
 	for _, tl := range prog {
 		res := execTopLevel(tl, context{
 			os.Stdin,
