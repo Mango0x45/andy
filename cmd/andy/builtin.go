@@ -39,6 +39,7 @@ func init() {
 		"read":  cmdRead,
 		"set":   cmdSet,
 		"true":  cmdTrue,
+		"umask": cmdUmask,
 	}
 }
 
@@ -428,6 +429,37 @@ func cmdSet(cmd *exec.Cmd, ctx context) uint8 {
 
 func cmdTrue(_ *exec.Cmd, _ context) uint8 {
 	return 0
+}
+
+func cmdUmask(cmd *exec.Cmd, _ context) uint8 {
+	cmd.Args = shiftDashDash(cmd.Args)
+
+	if len(cmd.Args) < 2 {
+		u := syscall.Umask(022)
+		syscall.Umask(u)
+		fmt.Fprintf(cmd.Stdout, "%04o\n", u)
+	} else {
+		s := cmd.Args[1]
+		u, err := strconv.ParseUint(s, 8, 0)
+		switch {
+		case errors.Is(err, strconv.ErrRange), err == nil && u < 0 || u > 0777:
+			cmdErrorf(cmd, "umask ‘%s’ is outside the allowed range of [0, 0777]", s)
+		case errors.Is(err, strconv.ErrSyntax):
+			cmdErrorf(cmd, "‘%s’ isn’t a valid umask", s)
+		}
+		if err != nil {
+			return 1
+		}
+		syscall.Umask(int(u))
+	}
+	return 0
+}
+
+func shiftDashDash(s []string) []string {
+	if len(s) > 1 && s[1] == "--" {
+		return s[1:]
+	}
+	return s
 }
 
 func cmdErrorf(cmd *exec.Cmd, format string, args ...any) uint8 {
