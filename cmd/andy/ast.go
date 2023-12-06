@@ -364,7 +364,8 @@ func (ps astProcSub) toStrings(ctx context) ([]string, commandResult) {
 		return nil, res
 	}
 
-	return stringsx.SplitMulti(out.String(), seps), nil
+	s := strings.TrimSuffix(out.String(), "\n")
+	return stringsx.SplitMulti(s, seps), nil
 }
 
 type astProcRedir struct {
