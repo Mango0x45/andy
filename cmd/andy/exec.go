@@ -13,8 +13,6 @@ import (
 	"sync"
 )
 
-const appendFlags = os.O_APPEND | os.O_CREATE | os.O_WRONLY
-
 func execTopLevels(tls []astTopLevel, ctx context) commandResult {
 	for _, tl := range tls {
 		if res := execTopLevel(tl, ctx); cmdFailed(res) {
@@ -159,7 +157,7 @@ func execCommand(cc astCleanCommand, ctx context) commandResult {
 		var err error
 		switch re.kind {
 		case redirAppend:
-			f, err = os.OpenFile(name, appendFlags, 0666)
+			f, err = os.OpenFile(name, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0666)
 		case redirClob:
 			f, err = os.Create(name)
 		case redirRead:
