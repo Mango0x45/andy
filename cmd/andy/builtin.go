@@ -156,12 +156,9 @@ func cmdCd(cmd *exec.Cmd, _ context) uint8 {
 }
 
 func cdPop(cmd *exec.Cmd) uint8 {
-	dst := dirStack.Pop()
-	if dst == nil {
+	if dst, ok := dirStack.Pop(); !ok {
 		return cmdErrorf(cmd, "the directory stack is empty")
-	}
-
-	if err := os.Chdir(*dst); err != nil {
+	} else if err := os.Chdir(dst); err != nil {
 		return cmdErrorf(cmd, "%s", err)
 	}
 	return 0

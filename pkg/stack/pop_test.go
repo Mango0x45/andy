@@ -2,12 +2,11 @@ package stack
 
 import "testing"
 
-func assertPop[T comparable](t *testing.T, s *Stack[T], x *T) {
-	y := s.Pop()
-	if x == nil && y == nil || x != nil && y != nil && *x == *y {
-		return
+func assertPop[T comparable](t *testing.T, s *Stack[T], x T, b1 bool) {
+	y, b2 := s.Pop()
+	if b1 != b2 || b1 && b2 && x != y {
+		t.Fatalf("Expected top of stack to be ‘%+v’ but got ‘%+v’", x, y)
 	}
-	t.Fatalf("Expected top of stack to be ‘%+v’ but got ‘%+v’", *x, *y)
 }
 
 func TestPop(t *testing.T) {
@@ -18,8 +17,8 @@ func TestPop(t *testing.T) {
 	s.Push(x)
 	s.Push(y)
 	s.Push(z)
-	assertPop(t, &s, &z)
-	assertPop(t, &s, &y)
-	assertPop(t, &s, &x)
-	assertPop(t, &s, nil)
+	assertPop(t, &s, z, true)
+	assertPop(t, &s, y, true)
+	assertPop(t, &s, x, true)
+	assertPop(t, &s, 0, false)
 }
