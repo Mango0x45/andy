@@ -57,6 +57,7 @@ a while.  The currently implemented features are:
 - [X] CLI arguments via `$args`
 - [X] Default variable expansion value (`$(foo:bar)`)
 - [X] `get` builtin function
+- [X] `!` builtin function
 
 ## Example
 

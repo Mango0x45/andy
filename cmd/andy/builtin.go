@@ -28,6 +28,7 @@ var (
 
 func init() {
 	builtins = map[string]builtin{
+		"!":     cmdBang,
 		"call":  cmdCall,
 		"cd":    cmdCd,
 		"echo":  cmdEcho,
@@ -43,6 +44,19 @@ func init() {
 		"type":  cmdType,
 		"umask": cmdUmask,
 	}
+}
+
+func cmdBang(cmd *exec.Cmd, ctx context) uint8 {
+	cmd.Args = shiftDashDash(cmd.Args)
+	if len(cmd.Args) == 1 {
+		fmt.Fprintln(cmd.Stderr, "Usage: ! command [argument ...]")
+		return 1
+	}
+	cmd.Args = cmd.Args[1:]
+	if res := execPreparedCommand(cmd, ctx); cmdFailed(res) {
+		return 0
+	}
+	return 1
 }
 
 func cmdCall(cmd *exec.Cmd, ctx context) uint8 {
