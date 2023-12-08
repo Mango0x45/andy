@@ -15,7 +15,7 @@ import (
 	"syscall"
 
 	"git.sr.ht/~mango/andy/pkg/stack"
-	"git.sr.ht/~mango/opts"
+	"git.sr.ht/~mango/opts/v2"
 )
 
 type builtin func(cmd *exec.Cmd, ctx context) uint8
@@ -66,10 +66,13 @@ func cmdCall(cmd *exec.Cmd, ctx context) uint8 {
 		return 1
 	}
 
-	flags, optind, err := opts.GetLong(cmd.Args, []opts.LongOpt{
+	flags, rest, err := opts.GetLong(cmd.Args, []opts.LongOpt{
 		{Short: 'b', Long: "builtin", Arg: opts.None},
 		{Short: 'c', Long: "command", Arg: opts.None},
 	})
+	if len(rest) == 0 {
+		return usage()
+	}
 	if err != nil {
 		cmdErrorf(cmd, "%s", err)
 		return usage()
@@ -84,10 +87,6 @@ func cmdCall(cmd *exec.Cmd, ctx context) uint8 {
 		}
 	}
 
-	rest := cmd.Args[optind:]
-	if len(rest) == 0 {
-		return usage()
-	}
 	f, xs := rest[0], rest[1:]
 
 	if !bflag && !cflag {
@@ -215,9 +214,12 @@ func cmdExec(cmd *exec.Cmd, _ context) uint8 {
 		return 1
 	}
 
-	flags, optind, err := opts.GetLong(cmd.Args, []opts.LongOpt{
+	flags, rest, err := opts.GetLong(cmd.Args, []opts.LongOpt{
 		{Short: 'z', Long: "zero", Arg: opts.Required},
 	})
+	if len(rest) == 0 {
+		return usage()
+	}
 	if err != nil {
 		cmdErrorf(cmd, "%s", err)
 		return usage()
@@ -229,11 +231,6 @@ func cmdExec(cmd *exec.Cmd, _ context) uint8 {
 			zflag = true
 			zeroth = f.Value
 		}
-	}
-
-	rest := cmd.Args[optind:]
-	if len(rest) == 0 {
-		return usage()
 	}
 
 	argv0, err := exec.LookPath(rest[0])
@@ -281,10 +278,13 @@ func cmdGet(cmd *exec.Cmd, ctx context) uint8 {
 		return 1
 	}
 
-	flags, optind, err := opts.GetLong(cmd.Args, []opts.LongOpt{
+	flags, rest, err := opts.GetLong(cmd.Args, []opts.LongOpt{
 		{Short: 'e', Long: "environment", Arg: opts.None},
 		{Short: 'g', Long: "global", Arg: opts.None},
 	})
+	if len(rest) == 0 {
+		return usage()
+	}
 	if err != nil {
 		cmdErrorf(cmd, "%s", err)
 		return usage()
@@ -297,11 +297,6 @@ func cmdGet(cmd *exec.Cmd, ctx context) uint8 {
 		case 'g':
 			gflag = true
 		}
-	}
-
-	rest := cmd.Args[optind:]
-	if len(rest) < 1 {
-		return usage()
 	}
 
 	if gflag || ctx.scope == nil {
@@ -347,12 +342,15 @@ func cmdRead(cmd *exec.Cmd, ctx context) uint8 {
 		return 1
 	}
 
-	flags, optind, err := opts.GetLong(cmd.Args, []opts.LongOpt{
+	flags, rest, err := opts.GetLong(cmd.Args, []opts.LongOpt{
 		{Short: 'd', Long: "delimiters", Arg: opts.Required},
 		{Short: 'D', Long: "no-empty", Arg: opts.None},
 		{Short: 'g', Long: "global", Arg: opts.None},
 		{Short: 'n', Long: "count", Arg: opts.Required},
 	})
+	if len(rest) != 1 {
+		return usage()
+	}
 	if err != nil {
 		cmdErrorf(cmd, "%s", err)
 		return usage()
@@ -376,11 +374,6 @@ func cmdRead(cmd *exec.Cmd, ctx context) uint8 {
 			}
 			cnt = n
 		}
-	}
-
-	rest := cmd.Args[optind:]
-	if len(rest) != 1 {
-		return usage()
 	}
 
 	sb := strings.Builder{}
@@ -446,7 +439,7 @@ func cmdSet(cmd *exec.Cmd, ctx context) uint8 {
 		return 1
 	}
 
-	flags, optind, err := opts.GetLong(cmd.Args, []opts.LongOpt{
+	flags, rest, err := opts.GetLong(cmd.Args, []opts.LongOpt{
 		{Short: 'e', Long: "environment", Arg: opts.None},
 		{Short: 'g', Long: "global", Arg: opts.None},
 	})
@@ -468,7 +461,6 @@ func cmdSet(cmd *exec.Cmd, ctx context) uint8 {
 		scope = globalVariableMap
 	}
 
-	rest := cmd.Args[optind:]
 	if len(rest) == 0 || eflag && len(rest) > 2 || eflag && gflag {
 		return usage()
 	}
