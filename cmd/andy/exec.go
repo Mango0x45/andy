@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"maps"
 	"net"
 	"os"
 	"os/exec"
@@ -241,7 +242,9 @@ func execFor(cmd *astFor, ctx context) commandResult {
 	}
 	for _, v := range vals {
 		ctx := ctx
-		ctx.scope = copyMap(ctx.scope)
+		if ctx.scope = maps.Clone(ctx.scope); ctx.scope == nil {
+			ctx.scope = map[string][]string{}
+		}
 		ctx.scope[bind] = []string{v}
 		if res := execTopLevels(cmd.body, ctx); cmdFailed(res) {
 			return res
@@ -314,9 +317,15 @@ func execSimple(cmd *astSimple, ctx context) commandResult {
 		}
 	}
 
-	if f, ok := globalFuncMap[c.Args[0]]; ok {
-		ctx.scope = copyMap(ctx.scope)
-		args := c.Args[1:]
+	return execPreparedCommand(c, ctx)
+}
+
+func execPreparedCommand(cmd *exec.Cmd, ctx context) commandResult {
+	if f, ok := globalFuncMap[cmd.Args[0]]; ok {
+		if ctx.scope = maps.Clone(ctx.scope); ctx.scope == nil {
+			ctx.scope = map[string][]string{}
+		}
+		args := cmd.Args[1:]
 		for i, a := range f.args {
 			if i >= len(args) {
 				break
@@ -325,13 +334,15 @@ func execSimple(cmd *astSimple, ctx context) commandResult {
 		}
 		if len(args) > len(f.args) {
 			ctx.scope["_"] = args[len(f.args):]
+		} else {
+			ctx.scope["_"] = []string{}
 		}
 		return execTopLevels(f.body, ctx)
 	}
-	if f, ok := builtins[c.Args[0]]; ok {
-		return errExitCode(f(c, ctx))
+	if f, ok := builtins[cmd.Args[0]]; ok {
+		return errExitCode(f(cmd, ctx))
 	}
-	switch err := c.Run(); err.(type) {
+	switch err := cmd.Run(); err.(type) {
 	case nil:
 		return errExitCode(0)
 	case *exec.ExitError:
