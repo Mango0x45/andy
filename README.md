@@ -58,6 +58,7 @@ a while.  The currently implemented features are:
 - [X] Default variable expansion value (`$(foo:bar)`)
 - [X] `get` builtin function
 - [X] `!` builtin function
+- [X] Run code at program exit by defining the ‘sigexit’ function
 
 ## Example
 

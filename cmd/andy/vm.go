@@ -41,6 +41,8 @@ func (vm *vm) run(prog astProgram) {
 	if vm.file {
 		globalVariableMap["args"] = os.Args[1:]
 	}
+
+	var failed bool
 	for _, tl := range prog {
 		res := execTopLevel(tl, context{
 			os.Stdin,
@@ -55,8 +57,24 @@ func (vm *vm) run(prog astProgram) {
 				warn(res)
 			}
 			if !vm.interactive {
-				os.Exit(1)
+				failed = true
+				break
 			}
 		}
+	}
+	if f, ok := globalFuncMap["sigexit"]; ok {
+		res := execTopLevels(f.body, context{
+			os.Stdin,
+			os.Stdout,
+			os.Stderr,
+			map[string][]string{"_": {}},
+		})
+		if cmdFailed(res) {
+			failed = true
+		}
+	}
+
+	if failed {
+		os.Exit(1)
 	}
 }
