@@ -35,6 +35,7 @@ func init() {
 		"exec":  cmdExec,
 		"exit":  cmdExit,
 		"false": cmdFalse,
+		"get":   cmdGet,
 		"quote": cmdQuote,
 		"read":  cmdRead,
 		"set":   cmdSet,
@@ -258,6 +259,61 @@ func cmdExit(cmd *exec.Cmd, _ context) uint8 {
 
 func cmdFalse(_ *exec.Cmd, _ context) uint8 {
 	return 1
+}
+
+func cmdGet(cmd *exec.Cmd, ctx context) uint8 {
+	var eflag, gflag bool
+	scope := ctx.scope
+
+	usage := func() uint8 {
+		fmt.Fprintln(cmd.Stderr, "Usage: get [-eg] variable ...")
+		return 1
+	}
+
+	flags, optind, err := opts.GetLong(cmd.Args, []opts.LongOpt{
+		{Short: 'e', Long: "environment", Arg: opts.None},
+		{Short: 'g', Long: "global", Arg: opts.None},
+	})
+	if err != nil {
+		cmdErrorf(cmd, "%s", err)
+		return usage()
+	}
+
+	for _, f := range flags {
+		switch f.Key {
+		case 'e':
+			eflag = true
+		case 'g':
+			gflag = true
+		}
+	}
+
+	rest := cmd.Args[optind:]
+	if len(rest) < 1 {
+		return usage()
+	}
+
+	if gflag || ctx.scope == nil {
+		scope = globalVariableMap
+	}
+
+	for _, a := range rest {
+		if ok, r := isRefName(a); !ok {
+			return cmdErrorf(cmd, "rune ‘%c’ is not allowed in variable names", r)
+		}
+	}
+
+	for _, a := range rest {
+		if eflag {
+			fmt.Fprintln(cmd.Stdout, os.Getenv(a))
+		} else {
+			for _, s := range scope[a] {
+				fmt.Fprintln(cmd.Stdout, s)
+			}
+		}
+	}
+
+	return 0
 }
 
 func cmdQuote(cmd *exec.Cmd, _ context) uint8 {
