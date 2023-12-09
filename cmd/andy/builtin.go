@@ -174,7 +174,7 @@ func cmdEcho(cmd *exec.Cmd, _ context) uint8 {
 	return 0
 }
 
-func cmdEval(cmd *exec.Cmd, _ context) uint8 {
+func cmdEval(cmd *exec.Cmd, ctx context) uint8 {
 	cmd.Args = shiftDashDash(cmd.Args)
 	if len(cmd.Args) == 1 {
 		cmd.Args = append(cmd.Args, "-")
@@ -198,7 +198,7 @@ func cmdEval(cmd *exec.Cmd, _ context) uint8 {
 		l := newLexer(string(buf))
 		p := newParser(l.out)
 		go l.run()
-		globalVm.run(p.run())
+		execTopLevels(p.run(), ctx)
 	}
 	return 0
 }

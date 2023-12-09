@@ -59,6 +59,7 @@ a while.  The currently implemented features are:
 - [X] `get` builtin function
 - [X] `!` builtin function
 - [X] Run code at program exit by defining the ‘sigexit’ function
+- [X] Handle signals with by defining a sig* function
 
 ## Example
 
