@@ -30,6 +30,40 @@ var (
 	globalVariableMap map[string][]string
 )
 
+var signals = []os.Signal{
+	syscall.SIGABRT,
+	syscall.SIGALRM,
+	syscall.SIGBUS,
+	syscall.SIGCHLD,
+	syscall.SIGCONT,
+	syscall.SIGFPE,
+	syscall.SIGHUP,
+	syscall.SIGILL,
+	syscall.SIGINT,
+	syscall.SIGIO,
+	syscall.SIGKILL,
+	syscall.SIGPIPE,
+	syscall.SIGPROF,
+	syscall.SIGPWR,
+	syscall.SIGQUIT,
+	syscall.SIGSEGV,
+	syscall.SIGSTKFLT,
+	syscall.SIGSTOP,
+	syscall.SIGSYS,
+	syscall.SIGTERM,
+	syscall.SIGTRAP,
+	syscall.SIGTSTP,
+	syscall.SIGTTIN,
+	syscall.SIGTTOU,
+	syscall.SIGURG,
+	syscall.SIGUSR1,
+	syscall.SIGUSR2,
+	syscall.SIGVTALRM,
+	syscall.SIGWINCH,
+	syscall.SIGXCPU,
+	syscall.SIGXFSZ,
+}
+
 func init() {
 	globalFuncMap = make(map[string]function, 64)
 	globalVariableMap = map[string][]string{
@@ -47,40 +81,7 @@ func (vm *vm) run(prog astProgram) {
 
 	if !vm.sigsHandled {
 		ch := make(chan os.Signal, 1)
-		signal.Notify(
-			ch,
-			syscall.SIGABRT,
-			syscall.SIGALRM,
-			syscall.SIGBUS,
-			syscall.SIGCHLD,
-			syscall.SIGCONT,
-			syscall.SIGFPE,
-			syscall.SIGHUP,
-			syscall.SIGILL,
-			syscall.SIGINT,
-			syscall.SIGIO,
-			syscall.SIGKILL,
-			syscall.SIGPIPE,
-			syscall.SIGPROF,
-			syscall.SIGPWR,
-			syscall.SIGQUIT,
-			syscall.SIGSEGV,
-			syscall.SIGSTKFLT,
-			syscall.SIGSTOP,
-			syscall.SIGSYS,
-			syscall.SIGTERM,
-			syscall.SIGTRAP,
-			syscall.SIGTSTP,
-			syscall.SIGTTIN,
-			syscall.SIGTTOU,
-			syscall.SIGURG,
-			syscall.SIGUSR1,
-			syscall.SIGUSR2,
-			syscall.SIGVTALRM,
-			syscall.SIGWINCH,
-			syscall.SIGXCPU,
-			syscall.SIGXFSZ,
-		)
+		signal.Notify(ch, signals...)
 		go signalHandler(ch)
 		vm.sigsHandled = true
 	}
