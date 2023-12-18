@@ -12,6 +12,7 @@ import (
 	"slices"
 	"strconv"
 	"strings"
+	"sync"
 	"syscall"
 
 	"git.sr.ht/~mango/andy/pkg/stack"
@@ -26,9 +27,12 @@ var (
 	reservedNames = []string{"cdstack", "pid", "ppid", "status"}
 )
 
+var asyncProcs sync.WaitGroup
+
 func init() {
 	builtins = map[string]builtin{
 		"!":     cmdBang,
+		"async": cmdAsync,
 		"call":  cmdCall,
 		"cd":    cmdCd,
 		"echo":  cmdEcho,
@@ -43,6 +47,7 @@ func init() {
 		"true":  cmdTrue,
 		"type":  cmdType,
 		"umask": cmdUmask,
+		"wait":  cmdWait,
 	}
 }
 
@@ -57,6 +62,23 @@ func cmdBang(cmd *exec.Cmd, ctx context) uint8 {
 		return 0
 	}
 	return 1
+}
+
+func cmdAsync(cmd *exec.Cmd, ctx context) uint8 {
+	cmd.Args = shiftDashDash(cmd.Args)
+	if len(cmd.Args) < 2 {
+		fmt.Fprintln(cmd.Stderr, "Usage: async command [argument ...]")
+		return 1
+	}
+
+	cmd.Args = cmd.Args[1:]
+	go func() {
+		asyncProcs.Add(1)
+		_ = execPreparedCommand(cmd, ctx)
+		asyncProcs.Done()
+	}()
+
+	return 0
 }
 
 func cmdCall(cmd *exec.Cmd, ctx context) uint8 {
@@ -538,6 +560,11 @@ func cmdUmask(cmd *exec.Cmd, _ context) uint8 {
 		}
 		syscall.Umask(int(u))
 	}
+	return 0
+}
+
+func cmdWait(cmd *exec.Cmd, ctx context) uint8 {
+	asyncProcs.Wait()
 	return 0
 }
 
