@@ -9,6 +9,7 @@ import (
 	"net"
 	"os"
 	"os/exec"
+	"os/signal"
 	"slices"
 	"sync"
 )
@@ -48,9 +49,30 @@ func execFuncDef(fd astFuncDef, ctx context) commandResult {
 		return errInternal{errors.New("attempted to define function without a name")}
 	}
 
+	n := args[0]
 	f := function{args: args[1:], body: fd.body}
-	globalFuncMap[args[0]] = f
 
+	_, ok1 := globalFuncMap[n]
+	sig, ok2 := signals[n]
+
+	if !ok1 && ok2 {
+		ch := make(chan os.Signal, 1)
+		signal.Notify(ch, sig)
+		go func() {
+			for range ch {
+				if f, ok := globalFuncMap[n]; ok {
+					execTopLevels(f.body, context{
+						os.Stdin,
+						os.Stdout,
+						os.Stderr,
+						nil,
+					})
+				}
+			}
+		}()
+	}
+
+	globalFuncMap[n] = f
 	return errExitCode(0)
 }
 
