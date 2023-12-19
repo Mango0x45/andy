@@ -360,22 +360,47 @@ func cmdGet(cmd *exec.Cmd, ctx context) uint8 {
 			fmt.Fprint(cmd.Stdout, varD)
 		}
 	}
-	if !nflag {
-		fmt.Fprint(cmd.Stdout, "\n")
-	}
+	fmt.Fprint(cmd.Stdout, "\n")
 
 	return 0
 }
 
 func cmdQuote(cmd *exec.Cmd, _ context) uint8 {
-	cmd.Args = shiftDashDash(cmd.Args)
-	for _, arg := range cmd.Args[1:] {
+	delim := "\n"
+	usage := func() uint8 {
+		fmt.Fprintln(cmd.Stderr, "Usage: quote [-d string] variable ...")
+		return 1
+	}
+
+	flags, rest, err := opts.GetLong(cmd.Args, []opts.LongOpt{
+		{Short: 'd', Long: "delimiter", Arg: opts.Required},
+	})
+	if err != nil {
+		cmdErrorf(cmd, "%s", err)
+		return usage()
+	}
+	if len(rest) < 1 {
+		return usage()
+	}
+
+	for _, f := range flags {
+		switch f.Key {
+		case 'd':
+			delim = f.Value
+		}
+	}
+
+	for i, arg := range cmd.Args[1:] {
 		s := "'#"
 		for strings.Contains(arg, s) {
 			s += string('#')
 		}
-		fmt.Fprintf(cmd.Stdout, "r%s'%s%s\n", s[1:], arg, s)
+		fmt.Fprintf(cmd.Stdout, "r%s'%s%s", s[1:], arg, s)
+		if i < len(cmd.Args[1:])-1 {
+			fmt.Fprint(cmd.Stdout, delim)
+		}
 	}
+	fmt.Fprint(cmd.Stdout, "\n")
 	return 0
 }
 
