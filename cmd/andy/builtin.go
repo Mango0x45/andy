@@ -292,17 +292,22 @@ func cmdFalse(_ *exec.Cmd, _ context) uint8 {
 }
 
 func cmdGet(cmd *exec.Cmd, ctx context) uint8 {
-	var eflag, gflag bool
+	var dflag, eflag, gflag, nflag bool
+	itemD, varD := "\n", "\n"
 	scope := ctx.scope
 
 	usage := func() uint8 {
-		fmt.Fprintln(cmd.Stderr, "Usage: get [-eg] variable ...")
+		fmt.Fprintln(cmd.Stderr, "Usage: get [-gn] [-Dd string] variable ...\n"+
+			"       get -e [-n] [-D string] variable ...")
 		return 1
 	}
 
 	flags, rest, err := opts.GetLong(cmd.Args, []opts.LongOpt{
+		{Short: 'D', Long: "var-delimiter", Arg: opts.Required},
+		{Short: 'd', Long: "item-delimiter", Arg: opts.Required},
 		{Short: 'e', Long: "environment", Arg: opts.None},
 		{Short: 'g', Long: "global", Arg: opts.None},
+		{Short: 'n', Long: "no-newline", Arg: opts.None},
 	})
 	if len(rest) == 0 {
 		return usage()
@@ -314,11 +319,22 @@ func cmdGet(cmd *exec.Cmd, ctx context) uint8 {
 
 	for _, f := range flags {
 		switch f.Key {
+		case 'D':
+			varD = f.Value
+		case 'd':
+			itemD = f.Value
+			dflag = true
 		case 'e':
 			eflag = true
 		case 'g':
 			gflag = true
+		case 'n':
+			nflag = true
 		}
+	}
+
+	if gflag && eflag || eflag && dflag {
+		return usage()
 	}
 
 	if gflag || ctx.scope == nil {
@@ -331,14 +347,24 @@ func cmdGet(cmd *exec.Cmd, ctx context) uint8 {
 		}
 	}
 
-	for _, a := range rest {
+	for i, a := range rest {
 		if eflag {
-			fmt.Fprintln(cmd.Stdout, os.Getenv(a))
+			fmt.Fprint(cmd.Stdout, os.Getenv(a))
 		} else {
-			for _, s := range scope[a] {
-				fmt.Fprintln(cmd.Stdout, s)
+			xs := scope[a]
+			for i, s := range xs {
+				fmt.Fprint(cmd.Stdout, s)
+				if i < len(xs)-1 {
+					fmt.Fprint(cmd.Stdout, itemD)
+				}
 			}
 		}
+		if i < len(rest)-1 {
+			fmt.Fprint(cmd.Stdout, varD)
+		}
+	}
+	if !nflag {
+		fmt.Fprint(cmd.Stdout, "\n")
 	}
 
 	return 0
