@@ -333,7 +333,7 @@ func cmdGet(cmd *exec.Cmd, ctx context) uint8 {
 		}
 	}
 
-	if gflag && eflag || eflag && dflag {
+	if eflag && (dflag || gflag) {
 		return usage()
 	}
 
