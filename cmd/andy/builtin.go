@@ -72,10 +72,10 @@ func cmdAsync(cmd *exec.Cmd, ctx context) uint8 {
 	}
 
 	cmd.Args = cmd.Args[1:]
+	asyncProcs.Add(1)
 	go func() {
-		asyncProcs.Add(1)
+		defer asyncProcs.Done()
 		_ = execPreparedCommand(cmd, ctx)
-		asyncProcs.Done()
 	}()
 
 	return 0
