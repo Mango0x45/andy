@@ -61,6 +61,7 @@ a while.  The currently implemented features are:
 - [X] Run code at program exit by defining the ‘sigexit’ function
 - [X] Handle signals with by defining a sig* function
 - [X] `async` and `wait` builtin functions for async code
+- [X] List index ranges (`$xs[i..j]`)
 
 ## Example
 

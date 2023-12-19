@@ -59,22 +59,32 @@ func (e errUnsupported) Error() string {
 	return fmt.Sprintf("Attempt to %s is unsupported", string(e))
 }
 
-func (e errClobber) ExitCode() uint8     { return cmdFailCode }
-func (e errExpected) ExitCode() uint8    { return cmdFailCode }
-func (e errFileOp) ExitCode() uint8      { return cmdFailCode }
-func (e errInternal) ExitCode() uint8    { return cmdFailCode }
-func (e errUnsupported) ExitCode() uint8 { return cmdFailCode }
-func (e errExitCode) ExitCode() uint8    { return uint8(e) }
+type errInvalidIndex struct {
+	i, l int
+}
+
+func (e errInvalidIndex) Error() string {
+	return fmt.Sprintf("invalid index ‘%d’ into list of length %d", e.i, e.l)
+}
+
+func (e errClobber) ExitCode() uint8      { return cmdFailCode }
+func (e errExpected) ExitCode() uint8     { return cmdFailCode }
+func (e errFileOp) ExitCode() uint8       { return cmdFailCode }
+func (e errInternal) ExitCode() uint8     { return cmdFailCode }
+func (e errUnsupported) ExitCode() uint8  { return cmdFailCode }
+func (e errInvalidIndex) ExitCode() uint8 { return cmdFailCode }
+func (e errExitCode) ExitCode() uint8     { return uint8(e) }
 
 type shellError interface {
 	isShellError()
 }
 
-func (_ errClobber) isShellError()     {}
-func (_ errExpected) isShellError()    {}
-func (_ errFileOp) isShellError()      {}
-func (_ errInternal) isShellError()    {}
-func (_ errUnsupported) isShellError() {}
+func (_ errClobber) isShellError()      {}
+func (_ errExpected) isShellError()     {}
+func (_ errFileOp) isShellError()       {}
+func (_ errInternal) isShellError()     {}
+func (_ errUnsupported) isShellError()  {}
+func (_ errInvalidIndex) isShellError() {}
 
 func cmdFailed(e commandResult) bool {
 	return e != nil && e.ExitCode() != 0

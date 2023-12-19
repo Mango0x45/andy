@@ -206,30 +206,45 @@ type astVarRef struct {
 	indices astList
 }
 
-func getIndex(s string, n int) (int, commandResult) {
-	i, err := strconv.Atoi(s)
-	if err, ok := err.(*strconv.NumError); ok {
-		var str string
+func stoi(s string) (int, commandResult) {
+	n, err := strconv.Atoi(s)
+	err, ok := err.(*strconv.NumError)
+	if !ok {
+		return n, nil
+	}
 
-		switch {
-		case errors.Is(err, strconv.ErrRange):
-			str = fmt.Sprintf("index ‘%s’ is out of range; what are you even doing?", s)
-		case errors.Is(err, strconv.ErrSyntax):
-			str = fmt.Sprintf("‘%s’ isn’t a valid index", s)
+	var es string
+	switch {
+	case errors.Is(err, strconv.ErrRange):
+		es = fmt.Sprintf("index ‘%s’ is out of range; what are you even doing?", s)
+	case errors.Is(err, strconv.ErrSyntax):
+		es = fmt.Sprintf("‘%s’ isn’t a valid index", s)
+	}
+
+	return 0, errInternal{errors.New(es)}
+}
+
+func getIndexRange(s string, n int) (int, int, commandResult) {
+	b, a, f := strings.Cut(s, "..")
+	i, err := stoi(b)
+	if cmdFailed(err) {
+		return 0, 0, err
+	}
+
+	var j int
+	switch {
+	case f && a != "":
+		j, err = stoi(a)
+		if cmdFailed(err) {
+			return 0, 0, err
 		}
-
-		return 0, errInternal{errors.New(str)}
+	case f:
+		j = n
+	default:
+		j = i + 1
 	}
 
-	if i < 0 {
-		i = n + i
-	}
-	if i < 0 || i >= n {
-		str := fmt.Sprintf("invalid index ‘%s’ into list of length %d", s, n)
-		return 0, errInternal{errors.New(str)}
-	}
-
-	return i, nil
+	return i, j, nil
 }
 
 func (vr astVarRef) toStrings(ctx context) ([]string, commandResult) {
@@ -271,13 +286,53 @@ func (vr astVarRef) toStrings(ctx context) ([]string, commandResult) {
 			return nil, res
 		}
 
-		ys := make([]string, 0, len(xs))
+		n := len(xs)
+		ys := make([]string, 0, n)
 		for _, s := range ss {
-			i, res := getIndex(s, len(xs))
+			i, j, res := getIndexRange(s, n)
 			if cmdFailed(res) {
 				return nil, res
 			}
-			ys = append(ys, xs[i])
+
+			I, J := i, j
+			if I < 0 {
+				I += n
+			}
+			if J < 0 {
+				J += n
+			}
+
+			if i < j {
+				switch {
+				case I < 0, I >= n:
+					return nil, errInvalidIndex{i, n}
+				case J < 0, J > n:
+					return nil, errInvalidIndex{j, n}
+				}
+
+				for k := i; k < j; k++ {
+					k := k
+					if k < 0 {
+						k += n
+					}
+					ys = append(ys, xs[k])
+				}
+			} else {
+				switch {
+				case I < 0, I > n:
+					return nil, errInvalidIndex{i, n}
+				case J < 0, J >= n:
+					return nil, errInvalidIndex{j, n}
+				}
+
+				for k := i - 1; k >= j; k-- {
+					k := k
+					if k < 0 {
+						k += n
+					}
+					ys = append(ys, xs[k])
+				}
+			}
 		}
 		xs = ys
 	}
