@@ -148,8 +148,9 @@ func lexDefault(l *lexer) lexFn {
 			l.backup()
 			return lexStringDouble
 
-		case r == '&':
-			return lexAmp
+		case strings.HasPrefix(l.input[l.pos-l.width:], "&&"):
+			l.pos++
+			l.emit(tokLAnd)
 		case r == '|':
 			return lexPipe
 		case r == '<':
@@ -246,17 +247,6 @@ func skipComment(l *lexer) lexFn {
 	return lexDefault
 }
 
-func lexAmp(l *lexer) lexFn {
-	switch l.peek() {
-	case '&':
-		l.next()
-		l.emit(tokLAnd)
-	default:
-		panic("Implement & operator")
-	}
-	return lexDefault
-}
-
 func lexPipe(l *lexer) lexFn {
 	switch l.peek() {
 	case '|':
@@ -284,6 +274,12 @@ func lexArg(l *lexer) lexFn {
 			l.backup()
 			l.out <- token{tokArg, sb.String()}
 			return lexDefault
+		case r == '&':
+			if l.peek() != '&' {
+				sb.WriteRune(r)
+				break
+			}
+			fallthrough
 		case r == eof,
 			unicode.IsSpace(r),
 			isEol(r),
@@ -460,7 +456,12 @@ func lexBacktick(l *lexer) lexFn {
 
 func lexMaybeConcat(l *lexer) lexFn {
 	r := l.peek()
-	if unicode.IsSpace(r) || isEol(r) || isClosing(r) || r == eof {
+	if unicode.IsSpace(r) ||
+		isEol(r) ||
+		isClosing(r) ||
+		r == '|' ||
+		r == '&' ||
+		r == eof {
 		return lexDefault
 	}
 
