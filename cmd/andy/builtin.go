@@ -292,13 +292,13 @@ func cmdFalse(_ *exec.Cmd, _ context) uint8 {
 }
 
 func cmdGet(cmd *exec.Cmd, ctx context) uint8 {
-	var dflag, eflag, gflag, nflag bool
+	var dflag, eflag, gflag bool
 	itemD, varD := "\n", "\n"
 	scope := ctx.scope
 
 	usage := func() uint8 {
-		fmt.Fprintln(cmd.Stderr, "Usage: get [-gn] [-Dd string] variable ...\n"+
-			"       get -e [-n] [-D string] variable ...")
+		fmt.Fprintln(cmd.Stderr, "Usage: get [-g] [-Dd string] variable ...\n"+
+			"       get -e [-D string] variable ...")
 		return 1
 	}
 
@@ -307,7 +307,6 @@ func cmdGet(cmd *exec.Cmd, ctx context) uint8 {
 		{Short: 'd', Long: "item-delimiter", Arg: opts.Required},
 		{Short: 'e', Long: "environment", Arg: opts.None},
 		{Short: 'g', Long: "global", Arg: opts.None},
-		{Short: 'n', Long: "no-newline", Arg: opts.None},
 	})
 	if len(rest) == 0 {
 		return usage()
@@ -328,8 +327,6 @@ func cmdGet(cmd *exec.Cmd, ctx context) uint8 {
 			eflag = true
 		case 'g':
 			gflag = true
-		case 'n':
-			nflag = true
 		}
 	}
 
