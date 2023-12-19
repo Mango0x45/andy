@@ -408,13 +408,13 @@ func cmdRead(cmd *exec.Cmd, ctx context) uint8 {
 	var Dflag, gflag bool
 
 	usage := func() uint8 {
-		fmt.Fprintln(cmd.Stderr, "Usage: read [-Dg] [-n num] [-d string] variable")
+		fmt.Fprintln(cmd.Stderr, "Usage: read [-Dg] [-d string] [-n num] variable")
 		return 1
 	}
 
 	flags, rest, err := opts.GetLong(cmd.Args, []opts.LongOpt{
-		{Short: 'd', Long: "delimiters", Arg: opts.Required},
 		{Short: 'D', Long: "no-empty", Arg: opts.None},
+		{Short: 'd', Long: "delimiters", Arg: opts.Required},
 		{Short: 'g', Long: "global", Arg: opts.None},
 		{Short: 'n', Long: "count", Arg: opts.Required},
 	})
@@ -430,10 +430,10 @@ func cmdRead(cmd *exec.Cmd, ctx context) uint8 {
 	cnt := math.MaxInt
 	for _, f := range flags {
 		switch f.Key {
-		case 'd':
-			ds = []byte(f.Value)
 		case 'D':
 			Dflag = true
+		case 'd':
+			ds = []byte(f.Value)
 		case 'g':
 			gflag = true
 		case 'n':
