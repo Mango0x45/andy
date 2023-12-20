@@ -13,6 +13,7 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"syscall"
 
 	"git.sr.ht/~mango/andy/pkg/stack"
@@ -27,7 +28,12 @@ var (
 	reservedNames = []string{"cdstack", "pid", "ppid", "status"}
 )
 
-var asyncProcs sync.WaitGroup
+var asyncProcs struct {
+	wg  sync.WaitGroup
+	wgs map[uint64]*sync.WaitGroup
+	mtx sync.Mutex
+	nId atomic.Uint64
+}
 
 func init() {
 	builtins = map[string]builtin{
@@ -49,6 +55,7 @@ func init() {
 		"umask": cmdUmask,
 		"wait":  cmdWait,
 	}
+	asyncProcs.wgs = make(map[uint64]*sync.WaitGroup, 32)
 }
 
 func cmdBang(cmd *exec.Cmd, ctx context) uint8 {
@@ -65,16 +72,56 @@ func cmdBang(cmd *exec.Cmd, ctx context) uint8 {
 }
 
 func cmdAsync(cmd *exec.Cmd, ctx context) uint8 {
-	cmd.Args = shiftDashDash(cmd.Args)
-	if len(cmd.Args) < 2 {
-		fmt.Fprintln(cmd.Stderr, "Usage: async command [argument ...]")
+	var ivar string
+	usage := func() uint8 {
+		fmt.Fprintln(cmd.Stderr, "Usage: async [-i [var]] command [argument ...]")
 		return 1
 	}
+	flags, rest, err := opts.GetLong(cmd.Args, []opts.LongOpt{
+		{Short: 'i', Long: "id", Arg: opts.Optional},
+	})
+	if err != nil {
+		cmdErrorf(cmd, "%s", err)
+		return usage()
+	}
+	if len(rest) == 0 {
+		return usage()
+	}
 
-	cmd.Args = cmd.Args[1:]
-	asyncProcs.Add(1)
+	var id uint64
+	for _, f := range flags {
+		switch f.Key {
+		case 'i':
+			if f.Value != "" {
+				ivar = f.Value
+			} else {
+				ivar = "_"
+			}
+			id = asyncProcs.nId.Add(1)
+		}
+	}
+
+	cmd.Args = rest
+	asyncProcs.wg.Add(1)
+	if id > 0 {
+		asyncProcs.mtx.Lock()
+		wg := &sync.WaitGroup{}
+		wg.Add(1)
+		asyncProcs.wgs[id] = wg
+		asyncProcs.mtx.Unlock()
+		// TODO: Assert ivar is a valid varref
+		globalVariableMap[ivar] = []string{strconv.FormatUint(id, 10)}
+	}
 	go func() {
-		defer asyncProcs.Done()
+		defer asyncProcs.wg.Done()
+		if id > 0 {
+			defer func() {
+				asyncProcs.mtx.Lock()
+				asyncProcs.wgs[id].Done()
+				delete(asyncProcs.wgs, id)
+				asyncProcs.mtx.Unlock()
+			}()
+		}
 		_ = execPreparedCommand(cmd, ctx)
 	}()
 
@@ -612,7 +659,29 @@ func cmdUmask(cmd *exec.Cmd, _ context) uint8 {
 }
 
 func cmdWait(cmd *exec.Cmd, ctx context) uint8 {
-	asyncProcs.Wait()
+	cmd.Args = shiftDashDash(cmd.Args)
+
+	if len(cmd.Args) <= 1 {
+		asyncProcs.wg.Wait()
+	} else {
+		ids := make([]uint64, len(cmd.Args)-1)
+		for i, a := range cmd.Args[1:] {
+			n, err := strconv.ParseUint(a, 10, 64)
+			if err != nil {
+				return cmdErrorf(cmd, "%s", err)
+			}
+			ids[i] = n
+		}
+
+		for _, id := range ids {
+			asyncProcs.mtx.Lock()
+			wg, ok := asyncProcs.wgs[id]
+			asyncProcs.mtx.Unlock()
+			if ok {
+				wg.Wait()
+			}
+		}
+	}
 	return 0
 }
 
