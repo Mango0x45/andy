@@ -390,13 +390,13 @@ func cmdQuote(cmd *exec.Cmd, _ context) uint8 {
 		}
 	}
 
-	for i, arg := range cmd.Args[1:] {
+	for i, arg := range rest {
 		s := "'#"
 		for strings.Contains(arg, s) {
 			s += string('#')
 		}
 		fmt.Fprintf(cmd.Stdout, "r%s'%s%s", s[1:], arg, s)
-		if i < len(cmd.Args[1:])-1 {
+		if i < len(rest)-1 {
 			fmt.Fprint(cmd.Stdout, delim)
 		}
 	}
