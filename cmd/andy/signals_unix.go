@@ -1,4 +1,3 @@
-//go:build unix && !(linux || darwin)
 package main
 
 import (
