@@ -65,7 +65,7 @@ func cmdBang(cmd *exec.Cmd, ctx context) uint8 {
 		return 1
 	}
 	cmd.Args = cmd.Args[1:]
-	if res := execPreparedCommand(cmd, ctx); cmdFailed(res) {
+	if res := execPreparedCommand(dupCmd(cmd), ctx); cmdFailed(res) {
 		return 0
 	}
 	return 1
@@ -122,7 +122,7 @@ func cmdAsync(cmd *exec.Cmd, ctx context) uint8 {
 				asyncProcs.mtx.Unlock()
 			}()
 		}
-		_ = execPreparedCommand(cmd, ctx)
+		_ = execPreparedCommand(dupCmd(cmd), ctx)
 	}()
 
 	return 0
@@ -156,24 +156,21 @@ func cmdCall(cmd *exec.Cmd, ctx context) uint8 {
 		}
 	}
 
-	f, xs := rest[0], rest[1:]
-
 	if !bflag && !cflag {
 		bflag = true
 		cflag = true
 	}
 
 	if bflag {
-		if b, ok := builtins[f]; ok {
+		if b, ok := builtins[rest[0]]; ok {
 			cmd.Args = rest
 			return b(cmd, ctx)
 		}
 	}
 
 	if cflag {
-		c := exec.Command(f, xs...)
-		c.Stdin, c.Stdout, c.Stderr = cmd.Stdin, cmd.Stdout, cmd.Stderr
-		c.ExtraFiles = cmd.ExtraFiles
+		cmd.Args = rest
+		c := dupCmd(cmd)
 		err = c.Run()
 		code := c.ProcessState.ExitCode()
 
@@ -683,6 +680,15 @@ func cmdWait(cmd *exec.Cmd, ctx context) uint8 {
 		}
 	}
 	return 0
+}
+
+func dupCmd(cmd *exec.Cmd) *exec.Cmd {
+	c := exec.Command(cmd.Args[0], cmd.Args[1:]...)
+	c.Stdin = cmd.Stdin
+	c.Stdout = cmd.Stdout
+	c.Stderr = cmd.Stderr
+	c.ExtraFiles = cmd.ExtraFiles
+	return c
 }
 
 func shiftDashDash(s []string) []string {
